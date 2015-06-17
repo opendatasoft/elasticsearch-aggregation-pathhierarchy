@@ -25,8 +25,10 @@ Usage
  - `max_depth`: Set maximum depth level. `-1` means no limit. Default to 3.
 
 
-Example
+Examples
 -------
+
+#### String field
 
 ```
 Add data:
@@ -142,10 +144,106 @@ Result :
    }
 }
 
+```
+
+#### Script
+
+```
+
+PUT calendar
+{
+  "mappings": {
+    "date": {
+      "properties": {
+        "date": {
+          "type": "date",
+          "index": "not_analyzed",
+          "doc_values": true
+        }
+      }
+    }
+  }
+}
+
+PUT /calendar/date/1
+{
+  "date": "2012-01-10T02:47:28"
+}
+
+PUT /calendar/date/2
+{
+  "date": "2012-01-05T01:43:35"
+}
+
+PUT /calendar/date/3
+{
+  "date": "2012-05-01T12:24:19"
+}
+
+GET /calendar/date/_search?search_type=count
+{
+  "aggs": {
+    "tree": {
+      "path_hierarchy": {
+        "script": "doc['date'].date.toString('YYYY/MM/dd')",
+        "order": {"_term": "asc"}
+      }
+    }
+  }
+}
+
+
+Result :
+
+{
+   "aggregations": {
+      "tree": {
+         "buckets": [
+            {
+               "key": "2012",
+               "doc_count": 3,
+               "tree": {
+                  "buckets": [
+                     {
+                        "key": "01",
+                        "doc_count": 2,
+                        "tree": {
+                           "buckets": [
+                              {
+                                 "key": "05",
+                                 "doc_count": 1
+                              },
+                              {
+                                 "key": "10",
+                                 "doc_count": 1
+                              }
+                           ]
+                        }
+                     },
+                     {
+                        "key": "05",
+                        "doc_count": 1,
+                        "tree": {
+                           "buckets": [
+                              {
+                                 "key": "01",
+                                 "doc_count": 1
+                              }
+                           ]
+                        }
+                     }
+                  ]
+               }
+            }
+         ]
+      }
+   }
+}
 
 
 
 ```
+
 
 
 License
