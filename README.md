@@ -3,10 +3,6 @@ Elasticsearch Aggregation Path Hierarchy Plugin
 
 This is a multi bucket aggregation.
 
-| elasticsearch | Path hierarchy plugin     |
-|---------------|---------------------------|
-| 1.6.0         | 1.6.0.0                   |
-
 
 Installation
 ------------

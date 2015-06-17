@@ -7,7 +7,7 @@
 
     <groupId>org.opendatasoft.elasticsearch</groupId>
     <artifactId>elasticsearch-aggregation-pathhierarchy</artifactId>
-    <version>1.6.0.0-SNAPSHOT</version>
+    <version>1.6.0.0</version>
 
     <parent>
         <groupId>org.sonatype.oss</groupId>
