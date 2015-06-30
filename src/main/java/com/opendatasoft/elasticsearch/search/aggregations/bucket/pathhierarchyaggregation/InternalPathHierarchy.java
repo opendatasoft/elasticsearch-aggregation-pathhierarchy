@@ -44,17 +44,14 @@ public class InternalPathHierarchy extends InternalAggregation implements PathHi
         protected int level;
         protected String[] path;
         protected String val;
-        protected List<Bucket> children;
 
-        public Bucket(Long hash, String val, BytesRef term, long docCount, InternalAggregations aggregations, int level, String[] path) {
-            this.hash = hash;
+        public Bucket(String val, BytesRef term, long docCount, InternalAggregations aggregations, int level, String[] path) {
             this.termBytes = term;
             this.docCount = docCount;
             this.aggregations = aggregations;
             this.level = level;
             this.path = path;
             this.val = val;
-            this.children = new ArrayList<>();
         }
 
         @Override
@@ -99,7 +96,7 @@ public class InternalPathHierarchy extends InternalAggregation implements PathHi
 
     }
 
-    private Map<String, List<Bucket>> buckets;
+    private List<Bucket> buckets;
     protected Map<BytesRef, Bucket> bucketMap;
     private InternalOrder order;
     private String separator;
@@ -107,7 +104,7 @@ public class InternalPathHierarchy extends InternalAggregation implements PathHi
     InternalPathHierarchy() {
     } // for serialization
 
-    public InternalPathHierarchy(String name, Map<String, List<Bucket>> buckets, InternalOrder order, String separator) {
+    public InternalPathHierarchy(String name, List<Bucket> buckets, InternalOrder order, String separator) {
         super(name);
         this.buckets = buckets;
         this.order = order;
@@ -120,19 +117,17 @@ public class InternalPathHierarchy extends InternalAggregation implements PathHi
     }
 
     @Override
-    public Collection<PathHierarchy.Bucket> getBuckets() {
+    public List<PathHierarchy.Bucket> getBuckets() {
         Object o = buckets;
-        return (Collection<PathHierarchy.Bucket>) o;
+        return (List<PathHierarchy.Bucket>) o;
     }
 
     @Override
     public PathHierarchy.Bucket getBucketByKey(String path) {
         if (bucketMap == null) {
             bucketMap = new HashMap<>();
-            for(List<Bucket> buckets: this.buckets.values()) {
-                for (Bucket bucket: buckets) {
-                    bucketMap.put(bucket.termBytes, bucket);
-                }
+            for(Bucket bucket: buckets) {
+                bucketMap.put(bucket.termBytes, bucket);
             }
         }
         return bucketMap.get(new BytesRef(path));
@@ -149,15 +144,13 @@ public class InternalPathHierarchy extends InternalAggregation implements PathHi
                 buckets = new HashMap<>();
             }
 
-            for (List<Bucket> tmpBuckets: pathHierarchy.buckets.values()) {
-                for (Bucket bucket: tmpBuckets) {
-                    List<Bucket> existingBuckets = buckets.get(bucket.termBytes);
-                    if (existingBuckets == null) {
-                        existingBuckets = new ArrayList<>(aggregations.size());
-                        buckets.put(bucket.termBytes, existingBuckets);
-                    }
-                    existingBuckets.add(bucket);
+            for (Bucket bucket: pathHierarchy.buckets) {
+                List<Bucket> existingBuckets = buckets.get(bucket.termBytes);
+                if (existingBuckets == null) {
+                    existingBuckets = new ArrayList<>(aggregations.size());
+                    buckets.put(bucket.termBytes, existingBuckets);
                 }
+                existingBuckets.add(bucket);
             }
         }
 
@@ -184,7 +177,28 @@ public class InternalPathHierarchy extends InternalAggregation implements PathHi
             CollectionUtil.introSort(bucket, order.comparator());
         }
 
-        return new InternalPathHierarchy(getName(), res, order, separator);
+        return new InternalPathHierarchy(getName(), createBucketListFromMap(res), order, separator);
+    }
+
+
+    private List<Bucket> createBucketListFromMap(Map<String, List<Bucket>> buckets) {
+        List<Bucket> res = new ArrayList<>();
+
+        List<Bucket> rootList = buckets.get(separator);
+        createBucketListFromMapRecurse(res, buckets, rootList);
+
+        return res;
+    }
+
+    private void createBucketListFromMapRecurse(List<Bucket> res, Map<String, List<Bucket>> mapBuckets, List<Bucket> buckets) {
+        for (Bucket bucket: buckets) {
+            res.add(bucket);
+
+            List<Bucket> children =  mapBuckets.get(bucket.getKey());
+            if (children != null && ! children.isEmpty()) {
+                createBucketListFromMapRecurse(res, mapBuckets, children);
+            }
+        }
     }
 
 
@@ -192,23 +206,18 @@ public class InternalPathHierarchy extends InternalAggregation implements PathHi
     public void readFrom(StreamInput in) throws IOException {
         this.name = in.readString();
         order = InternalOrder.Streams.readOrder(in);
-        int mapSize = in.readVInt();
-        this.buckets = new HashMap<>(mapSize);
-        for (int i = 0; i < mapSize; i++) {
-            String key = in.readString();
-            int listSize = in.readInt();
-            List<Bucket> bucketList = new ArrayList<>(listSize);
-            for (int j=0; j < listSize; j++) {
-                Bucket bucket = new Bucket(in.readLong(), in.readString(), in.readBytesRef(), in.readLong(), InternalAggregations.readAggregations(in), in.readInt(), null);
-                int sizePath = in.readInt();
-                String [] paths = new String[sizePath];
-                for (int k=0; k < sizePath; k++) {
-                    paths[k] = in.readString();
-                }
-                bucket.path = paths;
-                bucketList.add(bucket);
+        separator = in.readString();
+        int listSize = in.readVInt();
+        this.buckets = new ArrayList<>(listSize);
+        for (int i = 0; i < listSize; i++) {
+            Bucket bucket = new Bucket(in.readString(), in.readBytesRef(), in.readLong(), InternalAggregations.readAggregations(in), in.readInt(), null);
+            int sizePath = in.readInt();
+            String [] paths = new String[sizePath];
+            for (int k=0; k < sizePath; k++) {
+                paths[k] = in.readString();
             }
-            this.buckets.put(key, bucketList);
+            bucket.path = paths;
+            buckets.add(bucket);
         }
         this.bucketMap = null;
     }
@@ -217,53 +226,66 @@ public class InternalPathHierarchy extends InternalAggregation implements PathHi
     public void writeTo(StreamOutput out) throws IOException {
         out.writeString(name);
         InternalOrder.Streams.writeOrder(order, out);
+        out.writeString(separator);
         out.writeVInt(buckets.size());
-        for (String bucketKey : buckets.keySet()) {
-            out.writeString(bucketKey);
-            List<Bucket> bucketList = buckets.get(bucketKey);
-            out.writeInt(bucketList.size());
-            for (Bucket bucket: bucketList) {
-                out.writeLong(bucket.hash);
-                out.writeString(bucket.val);
-                out.writeBytesRef(bucket.termBytes);
-                out.writeLong(bucket.docCount);
-                ((InternalAggregations) bucket.getAggregations()).writeTo(out);
-                out.writeInt(bucket.level);
-                out.writeInt(bucket.path.length);
-                for (String path: bucket.path) {
-                    out.writeString(path);
-                }
+        for (Bucket bucket: buckets) {
+            out.writeString(bucket.val);
+            out.writeBytesRef(bucket.termBytes);
+            out.writeLong(bucket.docCount);
+            ((InternalAggregations) bucket.getAggregations()).writeTo(out);
+            out.writeInt(bucket.level);
+            out.writeInt(bucket.path.length);
+            for (String path: bucket.path) {
+                out.writeString(path);
             }
         }
     }
 
 
-    private void doXcontentRecurse(XContentBuilder builder, Params params, List<Bucket> buckets) throws IOException {
-        for (Bucket bucket: buckets) {
-            List<Bucket> childBuckets = this.buckets.get(bucket.getKey());
-            builder.startObject();
-            builder.field(CommonFields.KEY, bucket.val);
-            builder.field(CommonFields.DOC_COUNT, bucket.getDocCount());
-//            builder.field("level", bucket.level);
-//            builder.field("path", bucket.path);
-            ((InternalAggregations) bucket.getAggregations()).toXContentInternal(builder, params);
-            if (childBuckets != null && ! childBuckets.isEmpty()) {
+    private void doXContentInternal(XContentBuilder builder, Params params, Bucket currentBucket, Iterator<Bucket> bucketIterator) throws IOException {
+        builder.startObject();
+        builder.field(CommonFields.KEY, currentBucket.val);
+        builder.field(CommonFields.DOC_COUNT, currentBucket.getDocCount());
+        ((InternalAggregations) currentBucket.getAggregations()).toXContentInternal(builder, params);
+
+        if (bucketIterator.hasNext()) {
+            Bucket nextBucket = bucketIterator.next();
+            if (nextBucket.level == currentBucket.level) {
+                builder.endObject();
+            } else if (nextBucket.level > currentBucket.level) {
                 builder.startObject(name);
                 builder.startArray(CommonFields.BUCKETS);
-                doXcontentRecurse(builder, params, childBuckets);
-                builder.endArray();
+            } else {
+                builder.endObject();
+                for (int i=currentBucket.level; i > nextBucket.level; i--) {
+                    builder.endArray();
+                    builder.endObject();
+                    builder.endObject();
+                }
+            }
+            doXContentInternal(builder, params, nextBucket, bucketIterator);
+        } else {
+            if (currentBucket.level > 0) {
+                builder.endObject();
+                for (int i=currentBucket.level; i > 0; i--) {
+                    builder.endArray();
+                    builder.endObject();
+                    builder.endObject();
+                }
+            } else {
                 builder.endObject();
             }
-            builder.endObject();
         }
     }
 
     @Override
     public XContentBuilder doXContentBody(XContentBuilder builder, Params params) throws IOException {
+        Iterator<Bucket> bucketIterator = buckets.iterator();
         builder.startArray(CommonFields.BUCKETS);
-
-        doXcontentRecurse(builder, params, buckets.get(separator));
-
+        if (bucketIterator.hasNext()) {
+            Bucket firstBucket = bucketIterator.next();
+            doXContentInternal(builder, params, firstBucket, bucketIterator);
+        }
         builder.endArray();
         return builder;
     }

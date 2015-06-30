@@ -83,7 +83,7 @@ public class PathHierarchyParser implements Aggregator.Parser {
 
         @Override
         protected Aggregator createUnmapped(AggregationContext aggregationContext, Aggregator parent) {
-            final InternalAggregation aggregation = new InternalPathHierarchy(name, new HashMap<String, List<InternalPathHierarchy.Bucket>>(), order, separator);
+            final InternalAggregation aggregation = new InternalPathHierarchy(name, new ArrayList<InternalPathHierarchy.Bucket>(), order, separator);
             return new NonCollectingAggregator(name, aggregationContext, parent) {
                 public InternalAggregation buildEmptyAggregation() {
                     return aggregation;
@@ -118,13 +118,13 @@ public class PathHierarchyParser implements Aggregator.Parser {
                 hieraValues.setDocument(docId);
                 count = hieraValues.count();
                 grow();
+                int t = 0;
                 for (int i=0; i < hieraValues.count(); i++) {
                     String path = "";
                     int depth = 0;
                     BytesRef val = hieraValues.valueAt(i);
 
                     // FIXME : make a better sizing
-
                     List<String> listHiera = new ArrayList<>();
 
                     for (String s: val.utf8ToString().split(separator)) {
@@ -138,13 +138,10 @@ public class PathHierarchyParser implements Aggregator.Parser {
                     for(int j=0; j < listHiera.size(); j++) {
                         if (maxDepth >=0 && j > maxDepth) break;
                         String s = listHiera.get(j);
-                        if (s.length() == 0) {
-                            continue;
-                        }
                         if (depth > 0) path += separator;
                         path += s;
                         depth++;
-                        values[i + j].copyChars(path);
+                        values[t++].copyChars(path);
                     }
                 }
                 sort();
