@@ -81,12 +81,12 @@ public class PathHierarchyAggregator extends BucketsAggregator {
 
         final int size = (int) bucketOrds.size();
 
-        Map<String, List<InternalPathHierarchy.Bucket>> buckets = new HashMap<>();
+        List<InternalPathHierarchy.Bucket> buckets = new ArrayList<>();
         InternalPathHierarchy.Bucket spare;
 
         for (long i = 0; i < bucketOrds.size(); i++) {
 
-            spare = new InternalPathHierarchy.Bucket(null, null, new BytesRef(), 0, null, 0, null);
+            spare = new InternalPathHierarchy.Bucket(null, new BytesRef(), 0, null, 0, null);
 
             BytesRef term = new BytesRef();
             bucketOrds.get(i, term);
@@ -107,25 +107,25 @@ public class PathHierarchyAggregator extends BucketsAggregator {
                 key += StringUtils.join(spare.path, separator);
             }
 
-            List<InternalPathHierarchy.Bucket> listBuckets = buckets.get(key);
-            if (listBuckets == null) {
-                listBuckets = new ArrayList<>();
-            }
-            listBuckets.add(spare);
-            buckets.put(key, listBuckets);
+//            List<InternalPathHierarchy.Bucket> listBuckets = buckets.get(key);
+//            if (listBuckets == null) {
+//                listBuckets = new ArrayList<>();
+//            }
+            buckets.add(spare);
+//            buckets.put(key, listBuckets);
         }
 
 
-        for (List<InternalPathHierarchy.Bucket> bucket: buckets.values()) {
-            CollectionUtil.introSort(bucket, order.comparator());
-        }
+//        for (List<InternalPathHierarchy.Bucket> bucket: buckets.values()) {
+//            CollectionUtil.introSort(bucket, order.comparator());
+//        }
 
         return new InternalPathHierarchy(name, buckets, order, separator);
     }
 
     @Override
     public InternalPathHierarchy buildEmptyAggregation() {
-        return new InternalPathHierarchy(name, new HashMap<String, List<InternalPathHierarchy.Bucket>>(), order, separator);
+        return new InternalPathHierarchy(name, new ArrayList<InternalPathHierarchy.Bucket>(), order, separator);
     }
 
 

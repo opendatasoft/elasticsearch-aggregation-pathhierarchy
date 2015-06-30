@@ -3,6 +3,7 @@ package com.opendatasoft.elasticsearch.search.aggregations.bucket.pathhierarchya
 import org.elasticsearch.common.xcontent.ToXContent;
 import org.elasticsearch.search.aggregations.bucket.MultiBucketsAggregation;
 import java.util.Comparator;
+import java.util.List;
 
 
 public interface PathHierarchy extends MultiBucketsAggregation {
@@ -12,6 +13,10 @@ public interface PathHierarchy extends MultiBucketsAggregation {
         int compareTerm(Bucket other);
 
     }
+
+    List<Bucket> getBuckets();
+
+    Bucket getBucketByKey(String term);
 
 
     /**
