@@ -33,14 +33,17 @@ public class PathHierarchyTests extends ElasticsearchIntegrationTest{
     }
 
     static ObjectIntMap<String> expectedDocCountsForPath = null;
+    static ObjectIntMap<String> expectedDocCountsForPath2 = null;
 
     @Override
     protected void setupSuiteScopeCluster() throws Exception {
 
         expectedDocCountsForPath = new ObjectIntOpenHashMap<>();
+        expectedDocCountsForPath2 = new ObjectIntOpenHashMap<>();
 
         assertAcked(prepareCreate("idx")
-                .addMapping("path", PATH_FIELD_NAME, "type=string,index=not_analyzed"));
+                .addMapping("path", PATH_FIELD_NAME, "type=string,index=not_analyzed")
+                .addMapping("path2", PATH_FIELD_NAME, "type=string,index=not_analyzed"));
 
         List<IndexRequestBuilder> builders = new ArrayList<>();
         builders.add(client().prepareIndex("idx", "path").setSource(jsonBuilder()
@@ -59,13 +62,39 @@ public class PathHierarchyTests extends ElasticsearchIntegrationTest{
                 .field(VIEWS_FIELD_NAME, 1)
                 .endObject()));
 
+        List<IndexRequestBuilder> builders2 = new ArrayList<>();
+        builders.add(client().prepareIndex("idx", "path2").setSource(jsonBuilder()
+                .startObject()
+                .field(PATH_FIELD_NAME, "My documents|Spreadsheets|Budget_2013.xls")
+                .field(VIEWS_FIELD_NAME, 10)
+                .endObject()));
+        builders.add(client().prepareIndex("idx", "path2").setSource(jsonBuilder()
+                .startObject()
+                .field(PATH_FIELD_NAME, "My documents|Spreadsheets|Budget_2014.xls")
+                .field(VIEWS_FIELD_NAME, 7)
+                .endObject()));
+        builders.add(client().prepareIndex("idx", "path2").setSource(jsonBuilder()
+                .startObject()
+                .field(PATH_FIELD_NAME, "My documents|Test.txt")
+                .field(VIEWS_FIELD_NAME, 1)
+                .endObject()));
+
+
         expectedDocCountsForPath.put("My documents", 3);
         expectedDocCountsForPath.put("My documents/Spreadsheets", 2);
         expectedDocCountsForPath.put("My documents/Spreadsheets/Budget_2013.xls", 1);
         expectedDocCountsForPath.put("My documents/Spreadsheets/Budget_2014.xls", 1);
         expectedDocCountsForPath.put("My documents/Test.txt", 1);
 
+
+        expectedDocCountsForPath2.put("My documents", 3);
+        expectedDocCountsForPath2.put("My documents|Spreadsheets", 2);
+        expectedDocCountsForPath2.put("My documents|Spreadsheets|Budget_2013.xls", 1);
+        expectedDocCountsForPath2.put("My documents|Spreadsheets|Budget_2014.xls", 1);
+        expectedDocCountsForPath2.put("My documents|Test.txt", 1);
+
         indexRandom(true, builders);
+        indexRandom(true, builders2);
         ensureSearchable();
     }
 
@@ -84,6 +113,21 @@ public class PathHierarchyTests extends ElasticsearchIntegrationTest{
         assertNotSame(buckets.size(), 0);
         for (PathHierarchy.Bucket bucket: buckets) {
             assertEquals(expectedDocCountsForPath.get(bucket.getKey()), bucket.getDocCount());
+        }
+
+        SearchResponse response2 = client().prepareSearch("idx").setTypes("path2")
+                .addAggregation(new PathHierarchyBuilder("path")
+                                .field(PATH_FIELD_NAME)
+                                .separator("|")
+                ).execute().actionGet();
+
+        assertSearchResponse(response2);
+
+        PathHierarchy pathHierarchy2 = response2.getAggregations().get("path");
+        List<PathHierarchy.Bucket> buckets2 = pathHierarchy2.getBuckets();
+        assertNotSame(buckets2.size(), 0);
+        for (PathHierarchy.Bucket bucket: buckets2) {
+            assertEquals(expectedDocCountsForPath2.get(bucket.getKey()), bucket.getDocCount());
         }
     }
 }
