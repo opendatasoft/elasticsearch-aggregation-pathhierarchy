@@ -16,6 +16,7 @@ import org.elasticsearch.search.aggregations.support.ValuesSource;
 
 import java.io.IOException;
 import java.util.*;
+import java.util.regex.Pattern;
 
 public class PathHierarchyAggregator extends BucketsAggregator {
 
@@ -91,7 +92,7 @@ public class PathHierarchyAggregator extends BucketsAggregator {
             BytesRef term = new BytesRef();
             bucketOrds.get(i, term);
 
-            String [] paths = term.utf8ToString().split(separator);
+            String [] paths = term.utf8ToString().split(Pattern.quote(separator));
 
 //            spare.hash = MurmurHash3.hash128(spare.termBytes.bytes, spare.termBytes.offset, spare.termBytes.length, 0, new MurmurHash3.Hash128()).h1;
             spare.termBytes = BytesRef.deepCopyOf(term);

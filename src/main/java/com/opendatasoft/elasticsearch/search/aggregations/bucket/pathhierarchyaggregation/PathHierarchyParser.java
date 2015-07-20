@@ -13,6 +13,7 @@ import org.elasticsearch.search.internal.SearchContext;
 
 import java.io.IOException;
 import java.util.*;
+import java.util.regex.Pattern;
 
 public class PathHierarchyParser implements Aggregator.Parser {
 
@@ -127,7 +128,7 @@ public class PathHierarchyParser implements Aggregator.Parser {
                     // FIXME : make a better sizing
                     List<String> listHiera = new ArrayList<>();
 
-                    for (String s: val.utf8ToString().split(separator)) {
+                    for (String s: val.utf8ToString().split(Pattern.quote(separator))) {
                         if (s.length() == 0) {
                             continue;
                         }
