@@ -11,7 +11,7 @@ This is a multi bucket aggregation.
 Installation
 ------------
 
-`bin/plugin --install path_hierarchy --url "https://github.com/opendatasoft/elasticsearch-aggregation-pathhierarchy/releases/download/v1.6.0.1/elasticsearch-aggregation-pathhierarchy-1.6.0.1.zip"`
+`bin/plugin --install path_hierarchy --url "https://github.com/opendatasoft/elasticsearch-aggregation-pathhierarchy/releases/download/v1.6.0.2/elasticsearch-aggregation-pathhierarchy-1.6.0.2.zip"`
 
 
 Usage
