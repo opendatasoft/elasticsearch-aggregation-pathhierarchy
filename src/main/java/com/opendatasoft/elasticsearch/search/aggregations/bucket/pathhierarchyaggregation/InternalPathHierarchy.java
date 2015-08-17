@@ -99,12 +99,12 @@ public class InternalPathHierarchy extends InternalAggregation implements PathHi
     private List<Bucket> buckets;
     protected Map<BytesRef, Bucket> bucketMap;
     private InternalOrder order;
-    private String separator;
+    private BytesRef separator;
 
     InternalPathHierarchy() {
     } // for serialization
 
-    public InternalPathHierarchy(String name, List<Bucket> buckets, InternalOrder order, String separator) {
+    public InternalPathHierarchy(String name, List<Bucket> buckets, InternalOrder order, BytesRef separator) {
         super(name);
         this.buckets = buckets;
         this.order = order;
@@ -163,7 +163,7 @@ public class InternalPathHierarchy extends InternalAggregation implements PathHi
 
         Map<String, List<Bucket>> res = new HashMap<>();
         for (Bucket bucket: reduced) {
-            String key = bucket.path.length > 0 ? StringUtils.join(bucket.path, separator) : separator;
+            String key = bucket.path.length > 0 ? StringUtils.join(bucket.path, separator.utf8ToString()) : separator.utf8ToString();
 
             List<Bucket> listBuckets = res.get(key);
             if (listBuckets == null) {
@@ -184,7 +184,7 @@ public class InternalPathHierarchy extends InternalAggregation implements PathHi
     private List<Bucket> createBucketListFromMap(Map<String, List<Bucket>> buckets) {
         List<Bucket> res = new ArrayList<>();
 
-        List<Bucket> rootList = buckets.get(separator);
+        List<Bucket> rootList = buckets.get(separator.utf8ToString());
         createBucketListFromMapRecurse(res, buckets, rootList);
 
         return res;
@@ -206,7 +206,7 @@ public class InternalPathHierarchy extends InternalAggregation implements PathHi
     public void readFrom(StreamInput in) throws IOException {
         this.name = in.readString();
         order = InternalOrder.Streams.readOrder(in);
-        separator = in.readString();
+        separator = in.readBytesRef();
         int listSize = in.readVInt();
         this.buckets = new ArrayList<>(listSize);
         for (int i = 0; i < listSize; i++) {
@@ -226,7 +226,7 @@ public class InternalPathHierarchy extends InternalAggregation implements PathHi
     public void writeTo(StreamOutput out) throws IOException {
         out.writeString(name);
         InternalOrder.Streams.writeOrder(order, out);
-        out.writeString(separator);
+        out.writeBytesRef(separator);
         out.writeVInt(buckets.size());
         for (Bucket bucket: buckets) {
             out.writeString(bucket.val);
