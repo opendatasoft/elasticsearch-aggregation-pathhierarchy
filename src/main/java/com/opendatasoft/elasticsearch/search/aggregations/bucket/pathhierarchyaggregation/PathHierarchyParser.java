@@ -1,6 +1,7 @@
 package com.opendatasoft.elasticsearch.search.aggregations.bucket.pathhierarchyaggregation;
 
 import org.apache.lucene.util.BytesRef;
+import org.apache.lucene.util.BytesRefBuilder;
 import org.elasticsearch.common.xcontent.XContentParser;
 import org.elasticsearch.index.fielddata.SortedBinaryDocValues;
 import org.elasticsearch.index.fielddata.SortingBinaryDocValues;
@@ -13,7 +14,6 @@ import org.elasticsearch.search.internal.SearchContext;
 
 import java.io.IOException;
 import java.util.*;
-import java.util.regex.Pattern;
 
 public class PathHierarchyParser implements Aggregator.Parser {
 
@@ -65,17 +65,17 @@ public class PathHierarchyParser implements Aggregator.Parser {
             }
         }
 
-        return new PathHierarchyFactory(aggregationName, vsParser.config(), separator, maxDepth, order);
+        return new PathHierarchyFactory(aggregationName, vsParser.config(), new BytesRef(separator), maxDepth, order);
     }
 
 
     private static class PathHierarchyFactory extends ValuesSourceAggregatorFactory<ValuesSource> {
 
-        private String separator;
+        private BytesRef separator;
         private int maxDepth;
         private InternalOrder order;
 
-        public PathHierarchyFactory(String name, ValuesSourceConfig<ValuesSource> config, String separator, int maxDepth, InternalOrder order) {
+        public PathHierarchyFactory(String name, ValuesSourceConfig<ValuesSource> config, BytesRef separator, int maxDepth, InternalOrder order) {
             super(name, InternalPathHierarchy.TYPE.name(), config);
             this.separator = separator;
             this.maxDepth = maxDepth;
@@ -104,10 +104,10 @@ public class PathHierarchyParser implements Aggregator.Parser {
 
             private ValuesSource hierarchyValues;
             private SortedBinaryDocValues hieraValues;
-            private String separator;
+            private BytesRef separator;
             private int maxDepth;
 
-            protected HierarchyValues(ValuesSource hierarchyValues, String separator, int maxDepth) {
+            protected HierarchyValues(ValuesSource hierarchyValues, BytesRef separator, int maxDepth) {
                 this.hierarchyValues = hierarchyValues;
                 this.separator = separator;
                 this.maxDepth = maxDepth;
@@ -121,34 +121,56 @@ public class PathHierarchyParser implements Aggregator.Parser {
                 grow();
                 int t = 0;
                 for (int i=0; i < hieraValues.count(); i++) {
-                    String path = "";
                     int depth = 0;
+                    int lastOff = 0;
                     BytesRef val = hieraValues.valueAt(i);
 
-                    // FIXME : make a better sizing
-                    List<String> listHiera = new ArrayList<>();
+                    BytesRefBuilder cleanVal = new BytesRefBuilder();
 
-                    for (String s: val.utf8ToString().split(Pattern.quote(separator))) {
-                        if (s.length() == 0) {
-                            continue;
+                    for (int off=0; off < val.length; off++) {
+//                        if (isSeparator(val.bytes, val.offset + off)) {
+                        if (new BytesRef(val.bytes, val.offset + off, separator.length).equals(separator)) {
+                            if (off - lastOff > 1) {
+                                if (cleanVal.length() > 0) {
+                                    cleanVal.append(separator);
+                                }
+                                cleanVal.append(val.bytes, val.offset + lastOff, off - lastOff);
+                                values[t++].copyBytes(cleanVal);
+                                depth++;
+                                if (maxDepth >= 0 && depth > maxDepth) {
+                                    break;
+                                }
+                                off += separator.length - 1;
+                                lastOff = off + 1;
+                                count++;
+                                grow();
+                            } else {
+                                lastOff = off + separator.length;
+                            }
+                        } else if (off == val.length -1) {
+                            if (cleanVal.length() > 0) {
+                                cleanVal.append(separator);
+                            }
+                            cleanVal.append(val.bytes, val.offset + lastOff, off - lastOff + 1);
                         }
-                        listHiera.add(s);
+
                     }
-                    count += listHiera.size() - 1;
-                    grow();
-                    for(int j=0; j < listHiera.size(); j++) {
-                        if (maxDepth >=0 && j > maxDepth) break;
-                        String s = listHiera.get(j);
-                        if (depth > 0) path += separator;
-                        path += s;
-                        depth++;
-                        values[t++].copyChars(path);
+                    if (maxDepth >= 0 && depth > maxDepth) {
+                        continue;
                     }
+                    values[t++].copyBytes(cleanVal);
                 }
                 sort();
             }
-        }
 
+            private boolean isSeparator(byte[] val, int currentOffset) {
+                for (int i=0; i < separator.length; i++) {
+                    if (val[currentOffset+i] != separator.bytes[i])
+                        return false;
+                }
+                return true;
+            }
+        }
 
         private static class PathHierarchySource extends ValuesSource.Bytes {
 

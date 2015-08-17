@@ -3,6 +3,7 @@ package com.opendatasoft.search.aggregations.bucket;
 import com.opendatasoft.elasticsearch.plugin.pathhierarchyaggregation.PathHierarchyAggregationPlugin;
 import com.opendatasoft.elasticsearch.search.aggregations.bucket.pathhierarchyaggregation.PathHierarchy;
 import com.opendatasoft.elasticsearch.search.aggregations.bucket.pathhierarchyaggregation.PathHierarchyBuilder;
+import org.apache.lucene.util.BytesRef;
 import org.elasticsearch.action.index.IndexRequestBuilder;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.common.hppc.ObjectIntMap;
@@ -102,8 +103,8 @@ public class PathHierarchyTests extends ElasticsearchIntegrationTest{
     public void simple() {
         SearchResponse response = client().prepareSearch("idx").setTypes("path")
                 .addAggregation(new PathHierarchyBuilder("path")
-                        .field(PATH_FIELD_NAME)
-                        .separator("/")
+                                .field(PATH_FIELD_NAME)
+                                .separator("/")
                 ).execute().actionGet();
 
         assertSearchResponse(response);

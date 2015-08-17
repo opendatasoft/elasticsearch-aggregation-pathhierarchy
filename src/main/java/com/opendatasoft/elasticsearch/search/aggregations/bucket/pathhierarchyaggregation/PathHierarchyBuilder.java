@@ -1,5 +1,6 @@
 package com.opendatasoft.elasticsearch.search.aggregations.bucket.pathhierarchyaggregation;
 
+import org.apache.lucene.util.BytesRef;
 import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.search.aggregations.AggregationBuilder;
 
