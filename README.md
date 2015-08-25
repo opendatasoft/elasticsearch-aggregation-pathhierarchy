@@ -26,7 +26,9 @@ Usage
  - `field` or `script` : field to aggregate on
  - `separator` : separator for path hierarchy (default to "/")
  - `order` : order parameter to define how to sort result. Allowed parameters are `_term`, `_count` or sub aggregation name. Default to {"_count": "desc}.
+ - `min_depth`: Set minimum depth level. Default to 0.
  - `max_depth`: Set maximum depth level. `-1` means no limit. Default to 3.
+ - `depth`: Retrieve values for specified depth. Shortcut, instead of setting `min_depth` and `max_depth` parameters to the same value.
 
 
 Examples

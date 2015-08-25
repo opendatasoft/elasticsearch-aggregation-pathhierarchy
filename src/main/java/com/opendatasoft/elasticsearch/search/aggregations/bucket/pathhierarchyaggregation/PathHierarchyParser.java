@@ -5,6 +5,7 @@ import org.apache.lucene.util.BytesRefBuilder;
 import org.elasticsearch.common.xcontent.XContentParser;
 import org.elasticsearch.index.fielddata.SortedBinaryDocValues;
 import org.elasticsearch.index.fielddata.SortingBinaryDocValues;
+import org.elasticsearch.search.SearchParseException;
 import org.elasticsearch.search.aggregations.Aggregator;
 import org.elasticsearch.search.aggregations.AggregatorFactory;
 import org.elasticsearch.search.aggregations.InternalAggregation;
@@ -23,7 +24,8 @@ public class PathHierarchyParser implements Aggregator.Parser {
     }
 
     public static final String DEFAULT_SEPARATOR = "/";
-    public static final int DEFAULT_MAX_DEPTH = 3;
+    public static final int DEFAULT_MIN_DEPTH = 0;
+    public static final int DEFAULT_MAX_DEPTH = 2;
 
     @Override
     public AggregatorFactory parse(String aggregationName, XContentParser parser, SearchContext context) throws IOException {
@@ -32,6 +34,8 @@ public class PathHierarchyParser implements Aggregator.Parser {
 
         String separator = DEFAULT_SEPARATOR;
         int maxDepth = DEFAULT_MAX_DEPTH;
+        int minDepth = DEFAULT_MIN_DEPTH;
+        boolean depth = false;
         InternalOrder order = (InternalOrder) PathHierarchy.Order.KEY_ASC;
 
         XContentParser.Token token;
@@ -46,8 +50,13 @@ public class PathHierarchyParser implements Aggregator.Parser {
                     separator = parser.text();
                 }
             } else if (token == XContentParser.Token.VALUE_NUMBER) {
-                if ("max_depth".equals(currentFieldName)) {
+                if (!depth && "max_depth".equals(currentFieldName)) {
                     maxDepth = parser.intValue();
+                } else if (!depth && "min_depth".equals(currentFieldName)) {
+                    minDepth = parser.intValue();
+                } else if ("depth".equals(currentFieldName)) {
+                    minDepth = maxDepth = parser.intValue();
+                    depth = true;
                 }
             } else if (token == XContentParser.Token.START_OBJECT) {
                 if ("order".equals(currentFieldName)) {
@@ -65,7 +74,11 @@ public class PathHierarchyParser implements Aggregator.Parser {
             }
         }
 
-        return new PathHierarchyFactory(aggregationName, vsParser.config(), new BytesRef(separator), maxDepth, order);
+        if (minDepth > maxDepth) {
+            throw new SearchParseException(context, "min_depth paramater must be lower than max_depth parameter");
+        }
+
+        return new PathHierarchyFactory(aggregationName, vsParser.config(), new BytesRef(separator), minDepth, maxDepth, order);
     }
 
 
@@ -73,11 +86,13 @@ public class PathHierarchyParser implements Aggregator.Parser {
 
         private BytesRef separator;
         private int maxDepth;
+        private int minDepth;
         private InternalOrder order;
 
-        public PathHierarchyFactory(String name, ValuesSourceConfig<ValuesSource> config, BytesRef separator, int maxDepth, InternalOrder order) {
+        public PathHierarchyFactory(String name, ValuesSourceConfig<ValuesSource> config, BytesRef separator, int minDepth, int maxDepth, InternalOrder order) {
             super(name, InternalPathHierarchy.TYPE.name(), config);
             this.separator = separator;
+            this.minDepth = minDepth;
             this.maxDepth = maxDepth;
             this.order = order;
         }
@@ -94,7 +109,7 @@ public class PathHierarchyParser implements Aggregator.Parser {
 
         @Override
         protected Aggregator create(final ValuesSource valuesSource, long expectedBucketsCount, AggregationContext aggregationContext, Aggregator parent) {
-            final HierarchyValues hierarchyValues = new HierarchyValues(valuesSource, separator, maxDepth);
+            final HierarchyValues hierarchyValues = new HierarchyValues(valuesSource, separator, minDepth, maxDepth);
             ValuesSource.Bytes hierarchySource = new PathHierarchySource(hierarchyValues, valuesSource.metaData());
             return new PathHierarchyAggregator(name, factories, hierarchySource, aggregationContext, parent, separator, order);
 
@@ -105,11 +120,13 @@ public class PathHierarchyParser implements Aggregator.Parser {
             private ValuesSource hierarchyValues;
             private SortedBinaryDocValues hieraValues;
             private BytesRef separator;
+            private int minDepth;
             private int maxDepth;
 
-            protected HierarchyValues(ValuesSource hierarchyValues, BytesRef separator, int maxDepth) {
+            protected HierarchyValues(ValuesSource hierarchyValues, BytesRef separator, int minDepth, int maxDepth) {
                 this.hierarchyValues = hierarchyValues;
                 this.separator = separator;
+                this.minDepth = minDepth;
                 this.maxDepth = maxDepth;
             }
 
@@ -134,6 +151,12 @@ public class PathHierarchyParser implements Aggregator.Parser {
                                 if (cleanVal.length() > 0) {
                                     cleanVal.append(separator);
                                 }
+                                if (minDepth > depth) {
+                                    depth++;
+                                    off += separator.length - 1;
+                                    lastOff = off + 1;
+                                    continue;
+                                }
                                 cleanVal.append(val.bytes, val.offset + lastOff, off - lastOff);
                                 values[t++].copyBytes(cleanVal);
                                 depth++;
@@ -151,7 +174,9 @@ public class PathHierarchyParser implements Aggregator.Parser {
                             if (cleanVal.length() > 0) {
                                 cleanVal.append(separator);
                             }
-                            cleanVal.append(val.bytes, val.offset + lastOff, off - lastOff + 1);
+                            if (depth >= minDepth) {
+                                cleanVal.append(val.bytes, val.offset + lastOff, off - lastOff + 1);
+                            }
                         }
 
                     }
