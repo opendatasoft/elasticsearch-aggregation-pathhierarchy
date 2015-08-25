@@ -184,8 +184,10 @@ public class InternalPathHierarchy extends InternalAggregation implements PathHi
     private List<Bucket> createBucketListFromMap(Map<String, List<Bucket>> buckets) {
         List<Bucket> res = new ArrayList<>();
 
-        List<Bucket> rootList = buckets.get(separator.utf8ToString());
-        createBucketListFromMapRecurse(res, buckets, rootList);
+        if (buckets.size() > 0) {
+            List<Bucket> rootList = buckets.get(separator.utf8ToString());
+            createBucketListFromMapRecurse(res, buckets, rootList);
+        }
 
         return res;
     }

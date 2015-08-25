@@ -11,6 +11,8 @@ public class PathHierarchyBuilder extends AggregationBuilder<PathHierarchyBuilde
     private String field;
     private String separator = PathHierarchyParser.DEFAULT_SEPARATOR;
     private int maxDepth = PathHierarchyParser.DEFAULT_MAX_DEPTH;
+    private int minDepth = PathHierarchyParser.DEFAULT_MIN_DEPTH;
+    private Integer depth;
     private PathHierarchy.Order order;
 
     public PathHierarchyBuilder(String name) {
@@ -28,8 +30,18 @@ public class PathHierarchyBuilder extends AggregationBuilder<PathHierarchyBuilde
         return this;
     }
 
+    public PathHierarchyBuilder minDepth(int minDepth) {
+        this.minDepth = minDepth;
+        return this;
+    }
+
     public PathHierarchyBuilder maxDepth(int maxDepth) {
         this.maxDepth = maxDepth;
+        return this;
+    }
+
+    public PathHierarchyBuilder depth(int depth) {
+        this.depth = depth;
         return this;
     }
 
@@ -57,8 +69,16 @@ public class PathHierarchyBuilder extends AggregationBuilder<PathHierarchyBuilde
             builder.field("separator", separator);
         }
 
+        if ( minDepth != PathHierarchyParser.DEFAULT_MIN_DEPTH) {
+            builder.field("min_depth", minDepth);
+        }
+
         if ( maxDepth != PathHierarchyParser.DEFAULT_MAX_DEPTH) {
             builder.field("max_depth", maxDepth);
+        }
+
+        if (depth != null) {
+            builder.field("depth", depth);
         }
 
         return builder.endObject();
