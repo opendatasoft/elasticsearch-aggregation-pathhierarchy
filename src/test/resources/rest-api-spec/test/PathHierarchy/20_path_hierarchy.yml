@@ -1,0 +1,103 @@
+setup:
+- do:
+    indices.create:
+      index: filesystem
+      body:
+        mappings:
+          file:
+            properties:
+              path:
+                type: keyword
+                index: false
+                doc_values: true
+
+- do:
+    indices.create:
+      index: calendar
+      body:
+        mappings:
+          date:
+            properties:
+              date:
+                type: date
+                index: false
+                doc_values: true
+
+---
+"Test with filesystem arborescence":
+  - do:
+      index:
+        index: filesystem
+        type: file
+        id: 1
+        body: { "path": "/My documents/Spreadsheets/Budget_2013.xls", "views": 10 }
+
+  - do:
+      index:
+        index: filesystem
+        type: file
+        id: 2
+        body: { "path": "/My documents/Spreadsheets/Budget_2014.xls", "views": 7 }
+
+  - do:
+      index:
+        index: filesystem
+        type: file
+        id: 3
+        body: { "path": "/My documents/Test.txt", "views": 1 }
+
+  - do:
+      index:
+        index: filesystem
+        type: file
+        id: 4
+        body: { "path": "/My documents/Spreadsheets/Budget_2014.xls", "views": 12 }
+
+  - do:
+      indices.refresh: {}
+
+  - do:
+      search:
+        body: {
+          "size" : 0,
+          "aggs" : {
+            "tree" : {
+              "path_hierarchy" : {
+                "field" : "path",
+                "separator": "/",
+                "order": [ {"_count": "desc"}, {"_key": "asc"}],
+                "minDepth": 0,
+                "maxDepth": 3
+              },
+              "aggs": {
+                "total_views": {
+                  "sum": {
+                    "field": "views"
+                  }
+                }
+              }
+            }
+          }
+        }
+
+  - match: { hits.total: 4 }
+
+  - match: { aggregations.tree.buckets.0.key: "My documents" }
+  - match: { aggregations.tree.buckets.0.doc_count: 4 }
+  - match: { aggregations.tree.buckets.0.total_views.value: 30 }
+
+  - match: { aggregations.tree.buckets.0.tree.buckets.0.key: "Spreadsheets" }
+  - match: { aggregations.tree.buckets.0.tree.buckets.0.doc_count: 3 }
+  - match: { aggregations.tree.buckets.0.tree.buckets.0.total_views.value: 29 }
+
+  - match: { aggregations.tree.buckets.0.tree.buckets.1.key: "Test.txt" }
+  - match: { aggregations.tree.buckets.0.tree.buckets.1.doc_count: 1 }
+  - match: { aggregations.tree.buckets.0.tree.buckets.1.total_views.value: 1 }
+
+  - match: { aggregations.tree.buckets.0.tree.buckets.0.tree.buckets.0.key: "Budget_2014.xls" }
+  - match: { aggregations.tree.buckets.0.tree.buckets.0.tree.buckets.0.doc_count: 2 }
+  - match: { aggregations.tree.buckets.0.tree.buckets.0.tree.buckets.0.total_views.value: 19 }
+
+  - match: { aggregations.tree.buckets.0.tree.buckets.0.tree.buckets.1.key: "Budget_2013.xls" }
+  - match: { aggregations.tree.buckets.0.tree.buckets.0.tree.buckets.1.doc_count: 1 }
+  - match: { aggregations.tree.buckets.0.tree.buckets.0.tree.buckets.1.total_views.value: 10 }

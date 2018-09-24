@@ -1,256 +1,76 @@
-Elasticsearch Aggregation Path Hierarchy Plugin
+Elasticsearch Aggregation Envelope Plugin
 =========================================
 
-This plugins adds the possibility to create hierarchical aggregations.
-Each term is split on a provided separator (default "/") then aggregated by level.
-For a complete example see https://github.com/elastic/elasticsearch/issues/8896
+The envelope aggregation plugin adds the possibility to compute convex envelope for geo points.
 
-This is a multi bucket aggregation.
+This is a metric aggregation.
 
-| elasticsearch | Path hierarchy plugin     |
-|---------------|---------------------------|
-| 1.6.0         | 1.6.0.4                   |
-
-
-Installation
-------------
-
-`bin/plugin --install path_hierarchy --url "https://github.com/opendatasoft/elasticsearch-aggregation-pathhierarchy/releases/download/v1.6.0.4/elasticsearch-aggregation-pathhierarchy-1.6.0.4.zip"`
+|   Envelope aggregation Plugin  | elasticsearch     | Release date |
+|--------------------------------|-------------------|:------------:|
+| 6.2.4                          | 6.2.4             |              |
+| 1.2.0                          | 1.4.0 -> master   |  2014-11-27  |
+| 1.1.0                          | 1.3.0             |  2014-07-25  |
+| 1.0.0                          | 1.2.2             |  2014-07-16  |
 
 
 Usage
 -----
 
-### Parameters
-
- - `field` or `script` : field to aggregate on
- - `separator` : separator for path hierarchy (default to "/")
- - `order` : order parameter to define how to sort result. Allowed parameters are `_term`, `_count` or sub aggregation name. Default to {"_count": "desc}.
- - `min_depth`: Set minimum depth level. Default to 0.
- - `max_depth`: Set maximum depth level. `-1` means no limit. Default to 3.
- - `depth`: Retrieve values for specified depth. Shortcut, instead of setting `min_depth` and `max_depth` parameters to the same value.
-
-
-Examples
--------
-
-#### String field
-
+```json
+{
+  "aggregations": {
+    "<aggregation_name>": {
+      "envelope": {
+        "field": "<field_name>"
+      }
+    }
+  }
+}
 ```
-Add data:
 
-PUT /filesystem
+`field` must be of type geo_point.
+
+It returns a Geometry:
+
+- Point if the bucket contains only one unique point
+- LineString if the bucket contains two unique points
+- Polygon if the bucket contains more than three unique points
+
+For example :
+
+```json
 {
-  "mappings": {
-    "file": {
-      "properties": {
-        "path": {
-          "type": "string",
-          "index": "not_analyzed",
-          "doc_values": true
-        }
-      }
-    }
-  }
-}
-
-PUT /filesystem/file/1
-{
-  "path": "/My documents/Spreadsheets/Budget_2013.xls",
-  "views": 10
-}
-
-PUT /filesystem/file/2
-{
-  "path": "/My documents/Spreadsheets/Budget_2014.xls",
-  "views": 7
-}
-
-PUT /filesystem/file/3
-{
-  "path": "/My documents/Test.txt",
-  "views": 1
-}
-
-
-
-Path hierarchy request :
-
-GET /filesystem/file/_search?search_type=count
-{
-  "aggs": {
-    "tree": {
-      "path_hierarchy": {
-        "field": "path",
-        "separator": "/",
-        "order": {"_term": "desc"}
-      },
-      "aggs": {
-        "total_views": {
-          "sum": {
-            "field": "views"
-          }
-        }
-      }
-    }
-  }
-}
-
-
-Result :
-
-{"aggregations": {
-      "tree": {
-         "buckets": [
-            {
-               "key": "My documents",
-               "doc_count": 3,
-               "total_views": {
-                  "value": 18
-               },
-               "tree": {
-                  "buckets": [
-                     {
-                        "key": "Test.txt",
-                        "doc_count": 1,
-                        "total_views": {
-                           "value": 1
-                        }
-                     },
-                     {
-                        "key": "Spreadsheets",
-                        "doc_count": 2,
-                        "total_views": {
-                           "value": 17
-                        },
-                        "tree": {
-                           "buckets": [
-                              {
-                                 "key": "Budget_2014.xls",
-                                 "doc_count": 1,
-                                 "total_views": {
-                                    "value": 7
-                                 }
-                              },
-                              {
-                                 "key": "Budget_2013.xls",
-                                 "doc_count": 1,
-                                 "total_views": {
-                                    "value": 10
-                                 }
-                              }
-                           ]
-                        }
-                     }
-                  ]
-               }
-            }
+  "type": "Polygon",
+  "coordinates": [
+         [
+            [
+               2.3561,
+               48.8322
+            ],
+            [
+               2.33,
+               48.8493
+            ],
+            [
+               2.3333,
+               48.8667
+            ],
+            [
+               2.3615,
+               48.8637
+            ],
+            [
+               2.3561,
+               48.8322
+            ]
          ]
-      }
-   }
+    ]
 }
-
 ```
+Installation
+------------
 
-#### Script
-
-```
-
-PUT calendar
-{
-  "mappings": {
-    "date": {
-      "properties": {
-        "date": {
-          "type": "date",
-          "index": "not_analyzed",
-          "doc_values": true
-        }
-      }
-    }
-  }
-}
-
-PUT /calendar/date/1
-{
-  "date": "2012-01-10T02:47:28"
-}
-
-PUT /calendar/date/2
-{
-  "date": "2012-01-05T01:43:35"
-}
-
-PUT /calendar/date/3
-{
-  "date": "2012-05-01T12:24:19"
-}
-
-GET /calendar/date/_search?search_type=count
-{
-  "aggs": {
-    "tree": {
-      "path_hierarchy": {
-        "script": "doc['date'].date.toString('YYYY/MM/dd')",
-        "order": {"_term": "asc"}
-      }
-    }
-  }
-}
-
-
-Result :
-
-{
-   "aggregations": {
-      "tree": {
-         "buckets": [
-            {
-               "key": "2012",
-               "doc_count": 3,
-               "tree": {
-                  "buckets": [
-                     {
-                        "key": "01",
-                        "doc_count": 2,
-                        "tree": {
-                           "buckets": [
-                              {
-                                 "key": "05",
-                                 "doc_count": 1
-                              },
-                              {
-                                 "key": "10",
-                                 "doc_count": 1
-                              }
-                           ]
-                        }
-                     },
-                     {
-                        "key": "05",
-                        "doc_count": 1,
-                        "tree": {
-                           "buckets": [
-                              {
-                                 "key": "01",
-                                 "doc_count": 1
-                              }
-                           ]
-                        }
-                     }
-                  ]
-               }
-            }
-         ]
-      }
-   }
-}
-
-
-
-```
-
-
+`bin/plugin --install envelope_aggregation --url "https://github.com/opendatasoft/elasticsearch-aggregation-envelope/releases/download/v1.2.0/elasticsearch-envelope-aggregation-1.2.0.zip"`
 
 License
 -------
