@@ -260,10 +260,10 @@ To install it, launch this command in Elasticsearch directory replacing the url 
 | elasticsearch version | plugin version | plugin url |
 | --------------------- | -------------- | ---------- |
 | 1.6.0 | 1.6.0.4 | https://github.com/opendatasoft/elasticsearch-aggregation-pathhierarchy/releases/download/v1.6.0.4/elasticsearch-aggregation-pathhierarchy-1.6.0.4.zip |
-| 6.0.1 | 6.0.1.0 | https://github.com/opendatasoft/elasticsearch-aggregation-pathhierarchy/releases/download/v1.6.0.4/elasticsearch-aggregation-pathhierarchy-6.0.1.0.zip |
-| 6.1.4 | 6.1.4.0 | https://github.com/opendatasoft/elasticsearch-aggregation-pathhierarchy/releases/download/v1.6.0.4/elasticsearch-aggregation-pathhierarchy-6.1.4.0.zip |
-| 6.2.4 | 6.2.4.0 | https://github.com/opendatasoft/elasticsearch-aggregation-pathhierarchy/releases/download/v1.6.0.4/elasticsearch-aggregation-pathhierarchy-6.2.4.0.zip |
-| 6.3.2 | 6.3.2.0 | https://github.com/opendatasoft/elasticsearch-aggregation-pathhierarchy/releases/download/v1.6.0.4/elasticsearch-aggregation-pathhierarchy-6.3.2.0.zip |
+| 6.0.1 | 6.0.1.0 | https://github.com/opendatasoft/elasticsearch-aggregation-pathhierarchy/releases/download/v6.0.1.0/elasticsearch-aggregation-pathhierarchy-6.0.1.0.zip |
+| 6.1.4 | 6.1.4.0 | https://github.com/opendatasoft/elasticsearch-aggregation-pathhierarchy/releases/download/v6.1.4.0/elasticsearch-aggregation-pathhierarchy-6.1.4.0.zip |
+| 6.2.4 | 6.2.4.0 | https://github.com/opendatasoft/elasticsearch-aggregation-pathhierarchy/releases/download/v6.2.4.0/elasticsearch-aggregation-pathhierarchy-6.2.4.0.zip |
+| 6.3.2 | 6.3.2.0 | https://github.com/opendatasoft/elasticsearch-aggregation-pathhierarchy/releases/download/v6.3.2.0/elasticsearch-aggregation-pathhierarchy-6.3.2.0.zip |
 | 6.4.1 | 6.4.1.0 | https://github.com/opendatasoft/elasticsearch-aggregation-pathhierarchy/releases/download/v6.4.1.0/elasticsearch-aggregation-pathhierarchy-6.4.1.0.zip |
 
 
