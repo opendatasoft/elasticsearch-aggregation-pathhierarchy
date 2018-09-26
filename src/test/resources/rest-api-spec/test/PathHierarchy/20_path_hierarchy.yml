@@ -11,18 +11,6 @@ setup:
                 index: false
                 doc_values: true
 
-- do:
-    indices.create:
-      index: calendar
-      body:
-        mappings:
-          date:
-            properties:
-              date:
-                type: date
-                index: false
-                doc_values: true
-
 ---
 "Test with filesystem arborescence":
   - do:
