@@ -34,11 +34,6 @@ esplugin {
 
 dependencies {
     compile "org.elasticsearch:elasticsearch:${elasticVersion}"
-    // We need jts and spatial4j in the same version as what ES uses, to avoid
-    // conflicts
-//    compile 'com.vividsolutions:jts:1.13'
-//    compile 'org.locationtech.spatial4j:spatial4j:0.6'
-//    compile 'org.apache.commons:commons-lang3:3.0'
     testCompile "org.elasticsearch.test:framework:${elasticVersion}"
 }
 
