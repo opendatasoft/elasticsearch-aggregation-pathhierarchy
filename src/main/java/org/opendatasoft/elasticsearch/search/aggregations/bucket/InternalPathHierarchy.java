@@ -254,13 +254,6 @@ public class InternalPathHierarchy extends InternalMultiBucketAggregation<Intern
             final InternalBucket b = sameTermBuckets.get(0).reduce(sameTermBuckets, reduceContext);
             if (b.docCount >= minDocCount || !reduceContext.isFinalReduce()) {
                 InternalBucket removed = ordered.insertWithOverflow(b);
-                if (removed != null) {
-                    reduceContext.consumeBucketsAndMaybeBreak(-countInnerBucket(removed));
-                } else {
-                    reduceContext.consumeBucketsAndMaybeBreak(1);
-                }
-            } else {
-                reduceContext.consumeBucketsAndMaybeBreak(-countInnerBucket(b));
             }
         }
         InternalBucket[] reducedBuckets = new InternalBucket[ordered.size()];

@@ -135,9 +135,6 @@ public class PathHierarchyAggregator extends BucketsAggregator {
             spare.path = Arrays.copyOf(paths, paths.length - 1);
             spare.bucketOrd = i;
             spare = ordered.insertWithOverflow(spare);
-            if (spare == null) {
-                consumeBucketsAndMaybeBreak(1);
-            }
         }
 
         final InternalPathHierarchy.InternalBucket[] list = new InternalPathHierarchy.InternalBucket[ordered.size()];
