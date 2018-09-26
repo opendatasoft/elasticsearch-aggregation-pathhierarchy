@@ -85,21 +85,6 @@ public class PathHierarchyAggregationBuilder extends ValuesSourceAggregationBuil
         order = InternalOrder.Streams.readOrder(in);
     }
 
-    private PathHierarchyAggregationBuilder(PathHierarchyAggregationBuilder clone, Builder factoriesBuilder,
-                                           Map<String, Object> metaData) {
-        super(clone, factoriesBuilder, metaData);
-        separator = clone.separator;
-        minDepth = clone.minDepth;
-        maxDepth = clone.maxDepth;
-        depth = clone.depth;
-        order = clone.order;
-    }
-
-    @Override
-    protected AggregationBuilder shallowCopy(AggregatorFactories.Builder factoriesBuilder, Map<String, Object> metaData) {
-        return new PathHierarchyAggregationBuilder(this, factoriesBuilder, metaData);
-    }
-
     /**
      * Write to a stream
      */
