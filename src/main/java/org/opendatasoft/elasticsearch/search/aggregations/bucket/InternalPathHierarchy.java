@@ -143,12 +143,14 @@ public class InternalPathHierarchy extends InternalMultiBucketAggregation<Intern
     private List<InternalBucket> buckets;
     private BytesRef separator;
     private BucketOrder order;
+    private final int requiredSize;
     private final long minDocCount = 1;
 
     public InternalPathHierarchy(
             String name,
             List<InternalBucket> buckets,
             BucketOrder order,
+            int requiredSize,
             BytesRef separator,
             List<PipelineAggregator> pipelineAggregators,
             Map<String, Object> metaData
@@ -156,6 +158,7 @@ public class InternalPathHierarchy extends InternalMultiBucketAggregation<Intern
         super(name, pipelineAggregators, metaData);
         this.buckets = buckets;
         this.order = order;
+        this.requiredSize = requiredSize;
         this.separator = separator;
     }
 
@@ -165,6 +168,7 @@ public class InternalPathHierarchy extends InternalMultiBucketAggregation<Intern
     public InternalPathHierarchy(StreamInput in) throws IOException {
         super(in);
         order = InternalOrder.Streams.readOrder(in);
+        requiredSize = readSize(in);
         separator = in.readBytesRef();
         this.buckets = in.readList(InternalBucket::new);
     }
@@ -175,6 +179,7 @@ public class InternalPathHierarchy extends InternalMultiBucketAggregation<Intern
     @Override
     protected void doWriteTo(StreamOutput out) throws IOException {
         InternalOrder.Streams.writeOrder(order, out);
+        writeSize(requiredSize, out);
         out.writeBytesRef(separator);
         out.writeList(buckets);
     }
@@ -186,7 +191,8 @@ public class InternalPathHierarchy extends InternalMultiBucketAggregation<Intern
 
     @Override
     public InternalPathHierarchy create(List<InternalBucket> buckets) {
-        return new InternalPathHierarchy(this.name, buckets, order, this.separator, this.pipelineAggregators(), this.metaData);
+        return new InternalPathHierarchy(this.name, buckets, order, requiredSize,
+                this.separator, this.pipelineAggregators(), this.metaData);
     }
 
     @Override
@@ -225,7 +231,8 @@ public class InternalPathHierarchy extends InternalMultiBucketAggregation<Intern
         }
 
         // reduce and sort buckets depending of ordering rules
-        final BucketPriorityQueue<InternalBucket> ordered = new BucketPriorityQueue<>(buckets.size(), order.comparator(null));
+        final int size = !reduceContext.isFinalReduce() ? buckets.size() : Math.min(requiredSize, buckets.size());
+        final BucketPriorityQueue<InternalBucket> ordered = new BucketPriorityQueue<>(size, order.comparator(null));
         for (List<InternalBucket> sameTermBuckets : buckets.values()) {
             final InternalBucket b = sameTermBuckets.get(0).reduce(sameTermBuckets, reduceContext);
             if (b.docCount >= minDocCount || !reduceContext.isFinalReduce()) {
@@ -257,7 +264,8 @@ public class InternalPathHierarchy extends InternalMultiBucketAggregation<Intern
             res.put(key, listBuckets);
         }
 
-        return new InternalPathHierarchy(getName(), createBucketListFromMap(res), order, separator, pipelineAggregators(), getMetaData());
+        return new InternalPathHierarchy(getName(), createBucketListFromMap(res), order, requiredSize,
+                separator, pipelineAggregators(), getMetaData());
     }
 
     private List<InternalBucket> createBucketListFromMap(Map<String, List<InternalBucket>> buckets) {

@@ -33,6 +33,7 @@ class PathHierarchyAggregatorFactory extends ValuesSourceAggregatorFactory<Value
     private int maxDepth;
     private int minDepth;
     private BucketOrder order;
+    private final PathHierarchyAggregator.BucketCountThresholds bucketCountThresholds;
 
     PathHierarchyAggregatorFactory(String name,
                                    ValuesSourceConfig<ValuesSource> config,
@@ -40,6 +41,7 @@ class PathHierarchyAggregatorFactory extends ValuesSourceAggregatorFactory<Value
                                    int minDepth,
                                    int maxDepth,
                                    BucketOrder order,
+                                   PathHierarchyAggregator.BucketCountThresholds bucketCountThresholds,
                                    SearchContext context,
                                    AggregatorFactory<?> parent,
                                    AggregatorFactories.Builder subFactoriesBuilder,
@@ -50,6 +52,7 @@ class PathHierarchyAggregatorFactory extends ValuesSourceAggregatorFactory<Value
         this.minDepth = minDepth;
         this.maxDepth = maxDepth;
         this.order = order;
+        this.bucketCountThresholds = bucketCountThresholds;
     }
 
     @Override
@@ -58,8 +61,8 @@ class PathHierarchyAggregatorFactory extends ValuesSourceAggregatorFactory<Value
             List<PipelineAggregator> pipelineAggregators,
             Map<String,
             Object> metaData) throws IOException {
-        final InternalAggregation aggregation = new InternalPathHierarchy(name, new ArrayList<>(), order, separator,
-                pipelineAggregators, metaData);
+        final InternalAggregation aggregation = new InternalPathHierarchy(name, new ArrayList<>(), order,
+                bucketCountThresholds.getRequiredSize(), separator, pipelineAggregators, metaData);
         return new NonCollectingAggregator(name, context, parent, factories, pipelineAggregators, metaData) {
             {
                 // even in the case of an unmapped aggregator, validate the
@@ -82,9 +85,11 @@ class PathHierarchyAggregatorFactory extends ValuesSourceAggregatorFactory<Value
             boolean collectsFromSingleBucket, List<PipelineAggregator> pipelineAggregators,
             Map<String, Object> metaData) throws IOException {
         ValuesSource valuesSourceBytes = new HierarchyValuesSource(valuesSource, separator, minDepth, maxDepth);
+        PathHierarchyAggregator.BucketCountThresholds bucketCountThresholds = new
+                PathHierarchyAggregator.BucketCountThresholds(this.bucketCountThresholds);
         return new PathHierarchyAggregator(
                 name, factories, context,
-                valuesSourceBytes, order, separator,
+                valuesSourceBytes, order, bucketCountThresholds, separator,
                 parent, pipelineAggregators, metaData);
     }
 

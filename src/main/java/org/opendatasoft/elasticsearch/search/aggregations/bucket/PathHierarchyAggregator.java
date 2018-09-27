@@ -3,7 +3,12 @@ package org.opendatasoft.elasticsearch.search.aggregations.bucket;
 import org.apache.lucene.index.LeafReaderContext;
 import org.apache.lucene.util.BytesRef;
 import org.apache.lucene.util.BytesRefBuilder;
+import org.elasticsearch.common.io.stream.StreamInput;
+import org.elasticsearch.common.io.stream.StreamOutput;
+import org.elasticsearch.common.io.stream.Writeable;
 import org.elasticsearch.common.util.BytesRefHash;
+import org.elasticsearch.common.xcontent.ToXContentFragment;
+import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.index.fielddata.SortedBinaryDocValues;
 import org.elasticsearch.search.aggregations.Aggregator;
 import org.elasticsearch.search.aggregations.AggregatorFactories;
@@ -21,12 +26,71 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.regex.Pattern;
 
 public class PathHierarchyAggregator extends BucketsAggregator {
+
+    public static class BucketCountThresholds implements Writeable, ToXContentFragment {
+        private int requiredSize;
+
+        public BucketCountThresholds(int requiredSize) {
+            this.requiredSize = requiredSize;
+        }
+
+        /**
+         * Read from a stream.
+         */
+        public BucketCountThresholds(StreamInput in) throws IOException {
+            requiredSize = in.readInt();
+        }
+
+        @Override
+        public void writeTo(StreamOutput out) throws IOException {
+            out.writeInt(requiredSize);
+        }
+
+        public BucketCountThresholds(PathHierarchyAggregator.BucketCountThresholds bucketCountThresholds) {
+            this(bucketCountThresholds.requiredSize);
+        }
+
+        public int getRequiredSize() {
+            return requiredSize;
+        }
+
+        public void setRequiredSize(int requiredSize) {
+            this.requiredSize = requiredSize;
+        }
+
+        @Override
+        public XContentBuilder toXContent(XContentBuilder builder, Params params) throws IOException {
+            builder.field(PathHierarchyAggregationBuilder.SIZE_FIELD.getPreferredName(), requiredSize);
+            return builder;
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(requiredSize);
+        }
+
+        @Override
+        public boolean equals(Object obj) {
+            if (obj == null) {
+                return false;
+            }
+            if (getClass() != obj.getClass()) {
+                return false;
+            }
+            PathHierarchyAggregator.BucketCountThresholds other = (PathHierarchyAggregator.BucketCountThresholds) obj;
+            return Objects.equals(requiredSize, other.requiredSize);
+        }
+    }
+
+
     private final ValuesSource valuesSource;
     private final BytesRefHash bucketOrds;
     private final BucketOrder order;
+    private final BucketCountThresholds bucketCountThresholds;
     private final BytesRef separator;
 
     public PathHierarchyAggregator(
@@ -35,6 +99,7 @@ public class PathHierarchyAggregator extends BucketsAggregator {
             SearchContext context,
             ValuesSource valuesSource,
             BucketOrder order,
+            BucketCountThresholds bucketCountThresholds,
             BytesRef separator,
             Aggregator parent,
             List<PipelineAggregator> pipelineAggregators,
@@ -45,6 +110,7 @@ public class PathHierarchyAggregator extends BucketsAggregator {
         this.separator = separator;
         bucketOrds = new BytesRefHash(1, context.bigArrays());
         this.order = InternalOrder.validate(order, null);
+        this.bucketCountThresholds = bucketCountThresholds;
     }
 
     /**
@@ -97,7 +163,7 @@ public class PathHierarchyAggregator extends BucketsAggregator {
         assert owningBucketOrdinal == 0;
 
         // get back buckets
-        if (!InternalOrder.isCountDesc(order)) {
+        if (!InternalOrder.isCountDesc(order) || (bucketOrds.size() < bucketCountThresholds.getRequiredSize())) {
             // we need to fill-in the blanks
             for (LeafReaderContext ctx : context.searcher().getTopReaderContext().leaves()) {
                 final SortedBinaryDocValues values = valuesSource.bytesValues(ctx);
@@ -146,12 +212,14 @@ public class PathHierarchyAggregator extends BucketsAggregator {
             list[i] = bucket;
         }
 
-        return new InternalPathHierarchy(name, Arrays.asList(list), order, separator, pipelineAggregators(), metaData());
+        return new InternalPathHierarchy(name, Arrays.asList(list), order, bucketCountThresholds.getRequiredSize(),
+                separator, pipelineAggregators(), metaData());
     }
 
     @Override
     public InternalAggregation buildEmptyAggregation() {
-        return new InternalPathHierarchy(name, null, order, separator, pipelineAggregators(), metaData());
+        return new InternalPathHierarchy(name, null, order, bucketCountThresholds.getRequiredSize(),
+                separator, pipelineAggregators(), metaData());
     }
 
 }

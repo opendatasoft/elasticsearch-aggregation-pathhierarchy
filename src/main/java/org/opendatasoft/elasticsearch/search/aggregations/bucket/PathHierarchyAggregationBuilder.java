@@ -40,7 +40,10 @@ public class PathHierarchyAggregationBuilder extends ValuesSourceAggregationBuil
     public static final ParseField MAX_DEPTH_FIELD = new ParseField("maxDepth");
     public static final ParseField DEPTH_FIELD = new ParseField("depth");
     public static final ParseField ORDER_FIELD = new ParseField("order");
+    public static final ParseField SIZE_FIELD = new ParseField("size");
 
+    private static final PathHierarchyAggregator.BucketCountThresholds DEFAULT_BUCKET_COUNT_THRESHOLDS = new
+            PathHierarchyAggregator.BucketCountThresholds(10);
     private static final ObjectParser<PathHierarchyAggregationBuilder, Void> PARSER;
     static {
         PARSER = new ObjectParser<>(PathHierarchyAggregationBuilder.NAME);
@@ -50,6 +53,7 @@ public class PathHierarchyAggregationBuilder extends ValuesSourceAggregationBuil
         PARSER.declareInt(PathHierarchyAggregationBuilder::minDepth, MIN_DEPTH_FIELD);
         PARSER.declareInt(PathHierarchyAggregationBuilder::maxDepth, MAX_DEPTH_FIELD);
         PARSER.declareInt(PathHierarchyAggregationBuilder::depth, DEPTH_FIELD);
+        PARSER.declareInt(PathHierarchyAggregationBuilder::size, SIZE_FIELD);
         PARSER.declareObjectArray(PathHierarchyAggregationBuilder::order, (p, c) -> InternalOrder.Parser.parseOrderParam(p),
                 ORDER_FIELD);
     }
@@ -66,6 +70,8 @@ public class PathHierarchyAggregationBuilder extends ValuesSourceAggregationBuil
     private int maxDepth = DEFAULT_MAX_DEPTH;
     private int depth = -1;
     private BucketOrder order = BucketOrder.compound(BucketOrder.count(false)); // automatically adds tie-breaker key asc order
+    private PathHierarchyAggregator.BucketCountThresholds bucketCountThresholds = new PathHierarchyAggregator.BucketCountThresholds(
+            DEFAULT_BUCKET_COUNT_THRESHOLDS);
 
 
     private PathHierarchyAggregationBuilder(String name, ValueType valueType) {
@@ -78,6 +84,7 @@ public class PathHierarchyAggregationBuilder extends ValuesSourceAggregationBuil
      */
     public PathHierarchyAggregationBuilder(StreamInput in) throws IOException {
         super(in, ValuesSourceType.ANY);
+        bucketCountThresholds = new PathHierarchyAggregator.BucketCountThresholds(in);
         separator = in.readString();
         minDepth = in.readOptionalVInt();
         maxDepth = in.readOptionalVInt();
@@ -93,6 +100,7 @@ public class PathHierarchyAggregationBuilder extends ValuesSourceAggregationBuil
         maxDepth = clone.maxDepth;
         depth = clone.depth;
         order = clone.order;
+        this.bucketCountThresholds = new PathHierarchyAggregator.BucketCountThresholds(clone.bucketCountThresholds);
     }
 
     @Override
@@ -105,6 +113,7 @@ public class PathHierarchyAggregationBuilder extends ValuesSourceAggregationBuil
      */
     @Override
     protected void innerWriteTo(StreamOutput out) throws IOException {
+        bucketCountThresholds.writeTo(out);
         out.writeString(separator);
         out.writeOptionalVInt(minDepth);
         out.writeOptionalVInt(maxDepth);
@@ -155,6 +164,26 @@ public class PathHierarchyAggregationBuilder extends ValuesSourceAggregationBuil
         return this;
     }
 
+
+    /**
+     * Sets the size - indicating how many term buckets should be returned
+     * (defaults to 10)
+     */
+    public PathHierarchyAggregationBuilder size(int size) {
+        if (size <= 0) {
+            throw new IllegalArgumentException("[size] must be greater than 0. Found [" + size + "] in [" + name + "]");
+        }
+        bucketCountThresholds.setRequiredSize(size);
+        return this;
+    }
+
+    /**
+     * Returns the number of term buckets currently configured
+     */
+    public int size() {
+        return bucketCountThresholds.getRequiredSize();
+    }
+
     @Override
     protected ValuesSourceAggregatorFactory<ValuesSource, ?> innerBuild(
             SearchContext context,
@@ -175,9 +204,7 @@ public class PathHierarchyAggregationBuilder extends ValuesSourceAggregationBuil
         }
 
         return new PathHierarchyAggregatorFactory(
-                name, config,
-                separator, minDepth, maxDepth,
-                order,
+                name, config, separator, minDepth, maxDepth, order, bucketCountThresholds,
                 context, parent, subFactoriesBuilder, metaData);
     }
 
@@ -224,7 +251,8 @@ public class PathHierarchyAggregationBuilder extends ValuesSourceAggregationBuil
                 && Objects.equals(minDepth, other.minDepth)
                 && Objects.equals(maxDepth, other.maxDepth)
                 && Objects.equals(depth, other.depth)
-                && Objects.equals(order, other.order);
+                && Objects.equals(order, other.order)
+                && Objects.equals(bucketCountThresholds, other.bucketCountThresholds);
     }
 
     @Override

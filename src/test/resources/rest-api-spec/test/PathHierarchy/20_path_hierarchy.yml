@@ -44,6 +44,8 @@ setup:
   - do:
       indices.refresh: {}
 
+
+# basic test
   - do:
       search:
         body: {
@@ -89,6 +91,30 @@ setup:
   - match: { aggregations.tree.buckets.0.tree.buckets.0.tree.buckets.1.key: "Budget_2013.xls" }
   - match: { aggregations.tree.buckets.0.tree.buckets.0.tree.buckets.1.doc_count: 1 }
   - match: { aggregations.tree.buckets.0.tree.buckets.0.tree.buckets.1.total_views.value: 10 }
+
+
+# test size
+  - do:
+      search:
+        body: {
+          "size" : 0,
+          "aggs" : {
+            "tree" : {
+              "path_hierarchy" : {
+                "field" : "path",
+                "size": 2
+              }
+            }
+          }
+        }
+
+  - match: { hits.total: 4 }
+
+  - match: { aggregations.tree.buckets.0.key: "My documents" }
+  - match: { aggregations.tree.buckets.0.doc_count: 4 }
+
+  - match: { aggregations.tree.buckets.0.tree.buckets.0.key: "Spreadsheets" }
+  - match: { aggregations.tree.buckets.0.tree.buckets.0.doc_count: 3 }
 
 
 # test depth
