@@ -62,10 +62,9 @@ public class InternalPathHierarchy extends InternalMultiBucketAggregation<Intern
             aggregations = InternalAggregations.readAggregations(in);
             level = in.readInt();
             int path_length = in.readInt();
-            if (path_length>0) {
-                for (int i = 0; i < path_length; i++) {
-                    path[i] = in.readString();
-                }
+            path = new String[path_length];
+            for (int i = 0; i < path_length; i++) {
+                path[i] = in.readString();
             }
             basename = in.readString();
         }
@@ -167,19 +166,7 @@ public class InternalPathHierarchy extends InternalMultiBucketAggregation<Intern
         super(in);
         order = InternalOrder.Streams.readOrder(in);
         separator = in.readBytesRef();
-        int listSize = in.readVInt();
-        this.buckets = new ArrayList<>(listSize);
-        for (int i = 0; i < listSize; i++) {
-            InternalBucket bucket = new InternalBucket(in.readLong(), InternalAggregations.readAggregations(in),
-                    in.readString(), in.readBytesRef(), in.readInt(), null);
-            int sizePath = in.readInt();
-            String[] paths = new String[sizePath];
-            for (int k = 0; k < sizePath; k++) {
-                paths[k] = in.readString();
-            }
-            bucket.path = paths;
-            buckets.add(bucket);
-        }
+        this.buckets = in.readList(InternalBucket::new);
     }
 
     /**
@@ -189,18 +176,7 @@ public class InternalPathHierarchy extends InternalMultiBucketAggregation<Intern
     protected void doWriteTo(StreamOutput out) throws IOException {
         InternalOrder.Streams.writeOrder(order, out);
         out.writeBytesRef(separator);
-        out.writeVInt(buckets.size());
-        for (InternalBucket bucket: buckets) {
-            out.writeLong(bucket.docCount);
-            ((InternalAggregations) bucket.getAggregations()).writeTo(out);
-            out.writeString(bucket.basename);
-            out.writeBytesRef(bucket.termBytes);
-            out.writeInt(bucket.level);
-            out.writeInt(bucket.path.length);
-            for (String path: bucket.path) {
-                out.writeString(path);
-            }
-        }
+        out.writeList(buckets);
     }
 
     @Override

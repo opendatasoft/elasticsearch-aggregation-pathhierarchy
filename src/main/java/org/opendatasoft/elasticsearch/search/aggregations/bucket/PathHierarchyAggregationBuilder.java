@@ -60,11 +60,11 @@ public class PathHierarchyAggregationBuilder extends ValuesSourceAggregationBuil
 
     private static final String DEFAULT_SEPARATOR = "/";
     private static final int DEFAULT_MIN_DEPTH = 0;
-    private static final int DEFAULT_MAX_DEPTH = 2;
+    private static final int DEFAULT_MAX_DEPTH = 3;
     private String separator = DEFAULT_SEPARATOR;
     private int minDepth = DEFAULT_MIN_DEPTH;
     private int maxDepth = DEFAULT_MAX_DEPTH;
-    private int depth = 0;
+    private int depth = -1;
     private BucketOrder order = BucketOrder.compound(BucketOrder.count(false)); // automatically adds tie-breaker key asc order
 
 
@@ -165,6 +165,14 @@ public class PathHierarchyAggregationBuilder extends ValuesSourceAggregationBuil
         if (minDepth > maxDepth)
             throw new IllegalArgumentException("[minDepth] (" + minDepth + ") must not be greater than [maxDepth] (" +
                     maxDepth + ")");
+
+        if (depth >= 0) {
+            if (minDepth > depth)
+                throw new IllegalArgumentException("[minDepth] (" + minDepth + ") must not be greater than [depth] (" +
+                        depth + ")");
+            minDepth = depth;
+            maxDepth = depth;
+        }
 
         return new PathHierarchyAggregatorFactory(
                 name, config,

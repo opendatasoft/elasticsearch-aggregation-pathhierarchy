@@ -89,3 +89,38 @@ setup:
   - match: { aggregations.tree.buckets.0.tree.buckets.0.tree.buckets.1.key: "Budget_2013.xls" }
   - match: { aggregations.tree.buckets.0.tree.buckets.0.tree.buckets.1.doc_count: 1 }
   - match: { aggregations.tree.buckets.0.tree.buckets.0.tree.buckets.1.total_views.value: 10 }
+
+
+# test depth
+  - do:
+      search:
+        body: {
+          "size" : 0,
+          "aggs" : {
+            "tree" : {
+              "path_hierarchy" : {
+                "field" : "path",
+                "separator": "/",
+                "order": [ {"_count": "desc"}, {"_key": "asc"}],
+                "depth": 2
+              },
+              "aggs": {
+                "total_views": {
+                  "sum": {
+                    "field": "views"
+                  }
+                }
+              }
+            }
+          }
+        }
+
+  - match: { hits.total: 4 }
+
+  - match: { aggregations.tree.buckets.0.key: "Budget_2014.xls" }
+  - match: { aggregations.tree.buckets.0.doc_count: 2 }
+  - match: { aggregations.tree.buckets.0.total_views.value: 19 }
+
+  - match: { aggregations.tree.buckets.1.key: "Budget_2013.xls" }
+  - match: { aggregations.tree.buckets.1.doc_count: 1 }
+  - match: { aggregations.tree.buckets.1.total_views.value: 10 }
