@@ -144,6 +144,7 @@ public class InternalPathHierarchy extends InternalMultiBucketAggregation<Intern
     private BytesRef separator;
     private BucketOrder order;
     private final int requiredSize;
+    private final int shardSize;
     private final long minDocCount = 1;
 
     public InternalPathHierarchy(
@@ -151,6 +152,7 @@ public class InternalPathHierarchy extends InternalMultiBucketAggregation<Intern
             List<InternalBucket> buckets,
             BucketOrder order,
             int requiredSize,
+            int shardSize,
             BytesRef separator,
             List<PipelineAggregator> pipelineAggregators,
             Map<String, Object> metaData
@@ -159,6 +161,7 @@ public class InternalPathHierarchy extends InternalMultiBucketAggregation<Intern
         this.buckets = buckets;
         this.order = order;
         this.requiredSize = requiredSize;
+        this.shardSize = shardSize;
         this.separator = separator;
     }
 
@@ -169,6 +172,7 @@ public class InternalPathHierarchy extends InternalMultiBucketAggregation<Intern
         super(in);
         order = InternalOrder.Streams.readOrder(in);
         requiredSize = readSize(in);
+        shardSize = readSize(in);
         separator = in.readBytesRef();
         this.buckets = in.readList(InternalBucket::new);
     }
@@ -180,6 +184,7 @@ public class InternalPathHierarchy extends InternalMultiBucketAggregation<Intern
     protected void doWriteTo(StreamOutput out) throws IOException {
         InternalOrder.Streams.writeOrder(order, out);
         writeSize(requiredSize, out);
+        writeSize(shardSize, out);
         out.writeBytesRef(separator);
         out.writeList(buckets);
     }
@@ -189,9 +194,13 @@ public class InternalPathHierarchy extends InternalMultiBucketAggregation<Intern
         return PathHierarchyAggregationBuilder.NAME;
     }
 
+    protected int getShardSize() {
+        return shardSize;
+    }
+
     @Override
     public InternalPathHierarchy create(List<InternalBucket> buckets) {
-        return new InternalPathHierarchy(this.name, buckets, order, requiredSize,
+        return new InternalPathHierarchy(this.name, buckets, order, requiredSize, shardSize,
                 this.separator, this.pipelineAggregators(), this.metaData);
     }
 
@@ -264,7 +273,7 @@ public class InternalPathHierarchy extends InternalMultiBucketAggregation<Intern
             res.put(key, listBuckets);
         }
 
-        return new InternalPathHierarchy(getName(), createBucketListFromMap(res), order, requiredSize,
+        return new InternalPathHierarchy(getName(), createBucketListFromMap(res), order, requiredSize, shardSize,
                 separator, pipelineAggregators(), getMetaData());
     }
 
@@ -342,7 +351,7 @@ public class InternalPathHierarchy extends InternalMultiBucketAggregation<Intern
 
     @Override
     protected int doHashCode() {
-        return Objects.hash(buckets, separator, order);
+        return Objects.hash(buckets, separator, order, requiredSize, shardSize);
     }
 
     @Override
@@ -350,6 +359,8 @@ public class InternalPathHierarchy extends InternalMultiBucketAggregation<Intern
         InternalPathHierarchy that = (InternalPathHierarchy) obj;
         return Objects.equals(buckets, that.buckets)
                 && Objects.equals(separator, that.separator)
-                && Objects.equals(order, that.order);
+                && Objects.equals(order, that.order)
+                && Objects.equals(requiredSize, that.requiredSize)
+                && Objects.equals(shardSize, that.shardSize);
     }
 }

@@ -3,6 +3,7 @@ package org.opendatasoft.elasticsearch.search.aggregations.bucket;
 import org.apache.lucene.index.LeafReaderContext;
 import org.apache.lucene.util.BytesRef;
 import org.apache.lucene.util.BytesRefBuilder;
+import org.elasticsearch.ElasticsearchException;
 import org.elasticsearch.common.io.stream.StreamInput;
 import org.elasticsearch.common.io.stream.StreamOutput;
 import org.elasticsearch.common.io.stream.Writeable;
@@ -33,9 +34,11 @@ public class PathHierarchyAggregator extends BucketsAggregator {
 
     public static class BucketCountThresholds implements Writeable, ToXContentFragment {
         private int requiredSize;
+        private int shardSize;
 
-        public BucketCountThresholds(int requiredSize) {
+        public BucketCountThresholds(int requiredSize, int shardSize) {
             this.requiredSize = requiredSize;
+            this.shardSize = shardSize;
         }
 
         /**
@@ -43,15 +46,28 @@ public class PathHierarchyAggregator extends BucketsAggregator {
          */
         public BucketCountThresholds(StreamInput in) throws IOException {
             requiredSize = in.readInt();
+            shardSize = in.readInt();
         }
 
         @Override
         public void writeTo(StreamOutput out) throws IOException {
             out.writeInt(requiredSize);
+            out.writeInt(shardSize);
         }
 
         public BucketCountThresholds(PathHierarchyAggregator.BucketCountThresholds bucketCountThresholds) {
-            this(bucketCountThresholds.requiredSize);
+            this(bucketCountThresholds.requiredSize, bucketCountThresholds.shardSize);
+        }
+
+        public void ensureValidity() {
+            // shard_size cannot be smaller than size as we need to at least fetch <size> entries from every shards in order to return <size>
+            if (shardSize < requiredSize) {
+                setShardSize(requiredSize);
+            }
+
+            if (requiredSize <= 0 || shardSize <= 0) {
+                throw new ElasticsearchException("parameters [required_size] and [shard_size] must be >0 in path-hierarchy aggregation.");
+            }
         }
 
         public int getRequiredSize() {
@@ -62,15 +78,26 @@ public class PathHierarchyAggregator extends BucketsAggregator {
             this.requiredSize = requiredSize;
         }
 
+        public int getShardSize() {
+            return shardSize;
+        }
+
+        public void setShardSize(int shardSize) {
+            this.shardSize = shardSize;
+        }
+
         @Override
         public XContentBuilder toXContent(XContentBuilder builder, Params params) throws IOException {
             builder.field(PathHierarchyAggregationBuilder.SIZE_FIELD.getPreferredName(), requiredSize);
+            if (shardSize != -1) {
+                builder.field(PathHierarchyAggregationBuilder.SHARD_SIZE_FIELD.getPreferredName(), shardSize);
+            }
             return builder;
         }
 
         @Override
         public int hashCode() {
-            return Objects.hash(requiredSize);
+            return Objects.hash(requiredSize, shardSize);
         }
 
         @Override
@@ -82,7 +109,8 @@ public class PathHierarchyAggregator extends BucketsAggregator {
                 return false;
             }
             PathHierarchyAggregator.BucketCountThresholds other = (PathHierarchyAggregator.BucketCountThresholds) obj;
-            return Objects.equals(requiredSize, other.requiredSize);
+            return Objects.equals(requiredSize, other.requiredSize)
+                    && Objects.equals(shardSize, other.shardSize);
         }
     }
 
@@ -181,7 +209,8 @@ public class PathHierarchyAggregator extends BucketsAggregator {
         }
 
         // build buckets and store them sorted
-        BucketPriorityQueue<InternalPathHierarchy.InternalBucket> ordered = new BucketPriorityQueue<>((int) bucketOrds.size(),
+        final int size = (int) Math.min(bucketOrds.size(), bucketCountThresholds.getShardSize());
+        BucketPriorityQueue<InternalPathHierarchy.InternalBucket> ordered = new BucketPriorityQueue<>(size,
                 order.comparator(this));
         InternalPathHierarchy.InternalBucket spare = null;
         for (int i = 0; i < bucketOrds.size(); i++) {
@@ -213,13 +242,13 @@ public class PathHierarchyAggregator extends BucketsAggregator {
         }
 
         return new InternalPathHierarchy(name, Arrays.asList(list), order, bucketCountThresholds.getRequiredSize(),
-                separator, pipelineAggregators(), metaData());
+                bucketCountThresholds.getShardSize(), separator, pipelineAggregators(), metaData());
     }
 
     @Override
     public InternalAggregation buildEmptyAggregation() {
         return new InternalPathHierarchy(name, null, order, bucketCountThresholds.getRequiredSize(),
-                separator, pipelineAggregators(), metaData());
+                bucketCountThresholds.getShardSize(), separator, pipelineAggregators(), metaData());
     }
 
 }

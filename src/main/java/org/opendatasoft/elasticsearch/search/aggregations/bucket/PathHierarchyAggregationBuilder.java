@@ -41,9 +41,10 @@ public class PathHierarchyAggregationBuilder extends ValuesSourceAggregationBuil
     public static final ParseField DEPTH_FIELD = new ParseField("depth");
     public static final ParseField ORDER_FIELD = new ParseField("order");
     public static final ParseField SIZE_FIELD = new ParseField("size");
+    public static final ParseField SHARD_SIZE_FIELD = new ParseField("shard_size");
 
-    private static final PathHierarchyAggregator.BucketCountThresholds DEFAULT_BUCKET_COUNT_THRESHOLDS = new
-            PathHierarchyAggregator.BucketCountThresholds(10);
+    public static final PathHierarchyAggregator.BucketCountThresholds DEFAULT_BUCKET_COUNT_THRESHOLDS = new
+            PathHierarchyAggregator.BucketCountThresholds(10, -1);
     private static final ObjectParser<PathHierarchyAggregationBuilder, Void> PARSER;
     static {
         PARSER = new ObjectParser<>(PathHierarchyAggregationBuilder.NAME);
@@ -54,6 +55,7 @@ public class PathHierarchyAggregationBuilder extends ValuesSourceAggregationBuil
         PARSER.declareInt(PathHierarchyAggregationBuilder::maxDepth, MAX_DEPTH_FIELD);
         PARSER.declareInt(PathHierarchyAggregationBuilder::depth, DEPTH_FIELD);
         PARSER.declareInt(PathHierarchyAggregationBuilder::size, SIZE_FIELD);
+        PARSER.declareInt(PathHierarchyAggregationBuilder::shardSize, SHARD_SIZE_FIELD);
         PARSER.declareObjectArray(PathHierarchyAggregationBuilder::order, (p, c) -> InternalOrder.Parser.parseOrderParam(p),
                 ORDER_FIELD);
     }
@@ -182,6 +184,29 @@ public class PathHierarchyAggregationBuilder extends ValuesSourceAggregationBuil
      */
     public int size() {
         return bucketCountThresholds.getRequiredSize();
+    }
+
+
+    /**
+     * Sets the shard_size - indicating the number of term buckets each shard
+     * will return to the coordinating node (the node that coordinates the
+     * search execution). The higher the shard size is, the more accurate the
+     * results are.
+     */
+    public PathHierarchyAggregationBuilder shardSize(int shardSize) {
+        if (shardSize <= 0) {
+            throw new IllegalArgumentException(
+                    "[shardSize] must be greater than 0. Found [" + shardSize + "] in [" + name + "]");
+        }
+        bucketCountThresholds.setShardSize(shardSize);
+        return this;
+    }
+
+    /**
+     * Returns the number of term buckets per shard that are currently configured
+     */
+    public int shardSize() {
+        return bucketCountThresholds.getShardSize();
     }
 
     @Override
