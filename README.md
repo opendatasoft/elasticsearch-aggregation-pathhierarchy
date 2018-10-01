@@ -90,8 +90,8 @@ GET /filesystem/file/_search?size=0
         "field": "path",
         "separator": "/",
         "order": [{"_count": "desc"}, {"_key": "asc"}],
-        "minDepth": 0,
-        "maxDepth": 3
+        "min_depth": 0,
+        "max_depth": 3
       },
       "aggs": {
         "total_views": {

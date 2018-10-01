@@ -36,8 +36,8 @@ public class PathHierarchyAggregationBuilder extends ValuesSourceAggregationBuil
     public static final String NAME = "path_hierarchy";
 
     public static final ParseField SEPARATOR_FIELD = new ParseField("separator");
-    public static final ParseField MIN_DEPTH_FIELD = new ParseField("minDepth");
-    public static final ParseField MAX_DEPTH_FIELD = new ParseField("maxDepth");
+    public static final ParseField MIN_DEPTH_FIELD = new ParseField("min_depth");
+    public static final ParseField MAX_DEPTH_FIELD = new ParseField("max_depth");
     public static final ParseField DEPTH_FIELD = new ParseField("depth");
     public static final ParseField ORDER_FIELD = new ParseField("order");
     public static final ParseField SIZE_FIELD = new ParseField("size");
