@@ -3,7 +3,13 @@ package org.opendatasoft.elasticsearch.search.aggregations.bucket;
 import org.apache.lucene.index.LeafReaderContext;
 import org.apache.lucene.util.BytesRef;
 import org.apache.lucene.util.BytesRefBuilder;
+import org.elasticsearch.ElasticsearchException;
+import org.elasticsearch.common.io.stream.StreamInput;
+import org.elasticsearch.common.io.stream.StreamOutput;
+import org.elasticsearch.common.io.stream.Writeable;
 import org.elasticsearch.common.util.BytesRefHash;
+import org.elasticsearch.common.xcontent.ToXContentFragment;
+import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.index.fielddata.SortedBinaryDocValues;
 import org.elasticsearch.search.aggregations.Aggregator;
 import org.elasticsearch.search.aggregations.AggregatorFactories;
@@ -21,12 +27,98 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.regex.Pattern;
 
 public class PathHierarchyAggregator extends BucketsAggregator {
+
+    public static class BucketCountThresholds implements Writeable, ToXContentFragment {
+        private int requiredSize;
+        private int shardSize;
+
+        public BucketCountThresholds(int requiredSize, int shardSize) {
+            this.requiredSize = requiredSize;
+            this.shardSize = shardSize;
+        }
+
+        /**
+         * Read from a stream.
+         */
+        public BucketCountThresholds(StreamInput in) throws IOException {
+            requiredSize = in.readInt();
+            shardSize = in.readInt();
+        }
+
+        @Override
+        public void writeTo(StreamOutput out) throws IOException {
+            out.writeInt(requiredSize);
+            out.writeInt(shardSize);
+        }
+
+        public BucketCountThresholds(PathHierarchyAggregator.BucketCountThresholds bucketCountThresholds) {
+            this(bucketCountThresholds.requiredSize, bucketCountThresholds.shardSize);
+        }
+
+        public void ensureValidity() {
+            // shard_size cannot be smaller than size as we need to at least fetch size entries from every shards in order to return size
+            if (shardSize < requiredSize) {
+                setShardSize(requiredSize);
+            }
+
+            if (requiredSize <= 0 || shardSize <= 0) {
+                throw new ElasticsearchException("parameters [required_size] and [shard_size] must be >0 in path-hierarchy aggregation.");
+            }
+        }
+
+        public int getRequiredSize() {
+            return requiredSize;
+        }
+
+        public void setRequiredSize(int requiredSize) {
+            this.requiredSize = requiredSize;
+        }
+
+        public int getShardSize() {
+            return shardSize;
+        }
+
+        public void setShardSize(int shardSize) {
+            this.shardSize = shardSize;
+        }
+
+        @Override
+        public XContentBuilder toXContent(XContentBuilder builder, Params params) throws IOException {
+            builder.field(PathHierarchyAggregationBuilder.SIZE_FIELD.getPreferredName(), requiredSize);
+            if (shardSize != -1) {
+                builder.field(PathHierarchyAggregationBuilder.SHARD_SIZE_FIELD.getPreferredName(), shardSize);
+            }
+            return builder;
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(requiredSize, shardSize);
+        }
+
+        @Override
+        public boolean equals(Object obj) {
+            if (obj == null) {
+                return false;
+            }
+            if (getClass() != obj.getClass()) {
+                return false;
+            }
+            PathHierarchyAggregator.BucketCountThresholds other = (PathHierarchyAggregator.BucketCountThresholds) obj;
+            return Objects.equals(requiredSize, other.requiredSize)
+                    && Objects.equals(shardSize, other.shardSize);
+        }
+    }
+
+
     private final ValuesSource valuesSource;
     private final BytesRefHash bucketOrds;
     private final BucketOrder order;
+    private final BucketCountThresholds bucketCountThresholds;
     private final BytesRef separator;
 
     public PathHierarchyAggregator(
@@ -35,6 +127,7 @@ public class PathHierarchyAggregator extends BucketsAggregator {
             SearchContext context,
             ValuesSource valuesSource,
             BucketOrder order,
+            BucketCountThresholds bucketCountThresholds,
             BytesRef separator,
             Aggregator parent,
             List<PipelineAggregator> pipelineAggregators,
@@ -45,6 +138,7 @@ public class PathHierarchyAggregator extends BucketsAggregator {
         this.separator = separator;
         bucketOrds = new BytesRefHash(1, context.bigArrays());
         this.order = InternalOrder.validate(order, null);
+        this.bucketCountThresholds = bucketCountThresholds;
     }
 
     /**
@@ -97,7 +191,7 @@ public class PathHierarchyAggregator extends BucketsAggregator {
         assert owningBucketOrdinal == 0;
 
         // get back buckets
-        if (!InternalOrder.isCountDesc(order)) {
+        if (!InternalOrder.isCountDesc(order) || (bucketOrds.size() < bucketCountThresholds.getRequiredSize())) {
             // we need to fill-in the blanks
             for (LeafReaderContext ctx : context.searcher().getTopReaderContext().leaves()) {
                 final SortedBinaryDocValues values = valuesSource.bytesValues(ctx);
@@ -115,7 +209,9 @@ public class PathHierarchyAggregator extends BucketsAggregator {
         }
 
         // build buckets and store them sorted
-        BucketPriorityQueue<InternalPathHierarchy.InternalBucket> ordered = new BucketPriorityQueue<>((int) bucketOrds.size(),
+        final int size = (int) Math.min(bucketOrds.size(), bucketCountThresholds.getShardSize());
+        long otherDocCount = 0;
+        BucketPriorityQueue<InternalPathHierarchy.InternalBucket> ordered = new BucketPriorityQueue<>(size,
                 order.comparator(this));
         InternalPathHierarchy.InternalBucket spare = null;
         for (int i = 0; i < bucketOrds.size(); i++) {
@@ -129,6 +225,7 @@ public class PathHierarchyAggregator extends BucketsAggregator {
 
             spare.termBytes = BytesRef.deepCopyOf(term);
             spare.docCount = bucketDocCount(i);
+            otherDocCount += spare.docCount;
             spare.aggregations = bucketAggregations(i);
             spare.level = paths.length - 1;
             spare.basename = paths[paths.length - 1];
@@ -137,18 +234,22 @@ public class PathHierarchyAggregator extends BucketsAggregator {
             spare = ordered.insertWithOverflow(spare);
         }
 
+        // Get the top buckets
         final InternalPathHierarchy.InternalBucket[] list = new InternalPathHierarchy.InternalBucket[ordered.size()];
         for (int i = ordered.size() - 1; i >= 0; --i) {
             final InternalPathHierarchy.InternalBucket bucket = ordered.pop();
             list[i] = bucket;
+            otherDocCount -= bucket.docCount;
         }
 
-        return new InternalPathHierarchy(name, Arrays.asList(list), order, separator, pipelineAggregators(), metaData());
+        return new InternalPathHierarchy(name, Arrays.asList(list), order, bucketCountThresholds.getRequiredSize(),
+                bucketCountThresholds.getShardSize(), otherDocCount, separator, pipelineAggregators(), metaData());
     }
 
     @Override
     public InternalAggregation buildEmptyAggregation() {
-        return new InternalPathHierarchy(name, null, order, separator, pipelineAggregators(), metaData());
+        return new InternalPathHierarchy(name, null, order, bucketCountThresholds.getRequiredSize(),
+                bucketCountThresholds.getShardSize(), 0, separator, pipelineAggregators(), metaData());
     }
 
 }
