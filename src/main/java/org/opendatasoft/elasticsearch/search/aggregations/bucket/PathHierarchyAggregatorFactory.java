@@ -63,7 +63,7 @@ class PathHierarchyAggregatorFactory extends ValuesSourceAggregatorFactory<Value
             Map<String,
             Object> metaData) throws IOException {
         final InternalAggregation aggregation = new InternalPathHierarchy(name, new ArrayList<>(), order,
-                bucketCountThresholds.getRequiredSize(), bucketCountThresholds.getShardSize(), separator, pipelineAggregators, metaData);
+                bucketCountThresholds.getRequiredSize(), bucketCountThresholds.getShardSize(), 0, separator, pipelineAggregators, metaData);
         return new NonCollectingAggregator(name, context, parent, factories, pipelineAggregators, metaData) {
             {
                 // even in the case of an unmapped aggregator, validate the

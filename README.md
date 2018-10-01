@@ -23,9 +23,12 @@ Usage
  - `separator` : separator for path hierarchy (default to "/")
  - `order` : order parameter to define how to sort result. Allowed parameters are `_key`, `_count` or sub aggregation name. Default to {"_count": "desc}.
  - `size`: size parameter to define how many buckets should be returned. Default to 10.
+ - `shard_size`: how many buckets returned by each shards. Set to size if smaller, default to size if the search request needs to go to a single shard, and (size * 1.5 + 10) otherwise (more information here: https://www.elastic.co/guide/en/elasticsearch/reference/current/search-aggregations-bucket-terms-aggregation.html#_shard_size_3).
  - `min_depth`: Set minimum depth level. Default to 0.
  - `max_depth`: Set maximum depth level. `-1` means no limit. Default to 3.
  - `depth`: Retrieve values for specified depth. Shortcut, instead of setting `min_depth` and `max_depth` parameters to the same value.
+
+Please note that `sum_other_doc_count` is returned alongside aggregation buckets. It returns the sum of doc_count which are not returned from shards due to size/shard_size and so can be used to calibrate size/shard_size.
 
 
 Examples

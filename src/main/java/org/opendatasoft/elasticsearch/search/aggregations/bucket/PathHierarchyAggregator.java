@@ -60,7 +60,7 @@ public class PathHierarchyAggregator extends BucketsAggregator {
         }
 
         public void ensureValidity() {
-            // shard_size cannot be smaller than size as we need to at least fetch <size> entries from every shards in order to return <size>
+            // shard_size cannot be smaller than size as we need to at least fetch size entries from every shards in order to return size
             if (shardSize < requiredSize) {
                 setShardSize(requiredSize);
             }
@@ -210,6 +210,7 @@ public class PathHierarchyAggregator extends BucketsAggregator {
 
         // build buckets and store them sorted
         final int size = (int) Math.min(bucketOrds.size(), bucketCountThresholds.getShardSize());
+        long otherDocCount = 0;
         BucketPriorityQueue<InternalPathHierarchy.InternalBucket> ordered = new BucketPriorityQueue<>(size,
                 order.comparator(this));
         InternalPathHierarchy.InternalBucket spare = null;
@@ -224,6 +225,7 @@ public class PathHierarchyAggregator extends BucketsAggregator {
 
             spare.termBytes = BytesRef.deepCopyOf(term);
             spare.docCount = bucketDocCount(i);
+            otherDocCount += spare.docCount;
             spare.aggregations = bucketAggregations(i);
             spare.level = paths.length - 1;
             spare.basename = paths[paths.length - 1];
@@ -235,20 +237,22 @@ public class PathHierarchyAggregator extends BucketsAggregator {
             }
         }
 
+        // Get the top buckets
         final InternalPathHierarchy.InternalBucket[] list = new InternalPathHierarchy.InternalBucket[ordered.size()];
         for (int i = ordered.size() - 1; i >= 0; --i) {
             final InternalPathHierarchy.InternalBucket bucket = ordered.pop();
             list[i] = bucket;
+            otherDocCount -= bucket.docCount;
         }
 
         return new InternalPathHierarchy(name, Arrays.asList(list), order, bucketCountThresholds.getRequiredSize(),
-                bucketCountThresholds.getShardSize(), separator, pipelineAggregators(), metaData());
+                bucketCountThresholds.getShardSize(), otherDocCount, separator, pipelineAggregators(), metaData());
     }
 
     @Override
     public InternalAggregation buildEmptyAggregation() {
         return new InternalPathHierarchy(name, null, order, bucketCountThresholds.getRequiredSize(),
-                bucketCountThresholds.getShardSize(), separator, pipelineAggregators(), metaData());
+                bucketCountThresholds.getShardSize(), 0, separator, pipelineAggregators(), metaData());
     }
 
 }
