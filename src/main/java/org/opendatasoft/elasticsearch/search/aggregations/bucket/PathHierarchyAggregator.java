@@ -190,24 +190,6 @@ public class PathHierarchyAggregator extends BucketsAggregator {
     public InternalAggregation buildAggregation(long owningBucketOrdinal) throws IOException {
         assert owningBucketOrdinal == 0;
 
-        // get back buckets
-        if (!InternalOrder.isCountDesc(order) || (bucketOrds.size() < bucketCountThresholds.getRequiredSize())) {
-            // we need to fill-in the blanks
-            for (LeafReaderContext ctx : context.searcher().getTopReaderContext().leaves()) {
-                final SortedBinaryDocValues values = valuesSource.bytesValues(ctx);
-                // brute force
-                for (int docId = 0; docId < ctx.reader().maxDoc(); ++docId) {
-                    if (values.advanceExact(docId)) {
-                        final int valueCount = values.docValueCount();
-                        for (int i = 0; i < valueCount; ++i) {
-                            final BytesRef term = values.nextValue();
-                            bucketOrds.add(term);
-                        }
-                    }
-                }
-            }
-        }
-
         // build buckets and store them sorted
         final int size = (int) Math.min(bucketOrds.size(), bucketCountThresholds.getShardSize());
         long otherDocCount = 0;
