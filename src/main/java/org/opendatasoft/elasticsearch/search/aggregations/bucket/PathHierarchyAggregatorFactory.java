@@ -31,9 +31,10 @@ import java.util.Map;
 class PathHierarchyAggregatorFactory extends ValuesSourceAggregatorFactory<ValuesSource, PathHierarchyAggregatorFactory> {
 
     private BytesRef separator;
-    private int maxDepth;
     private int minDepth;
+    private int maxDepth;
     private BucketOrder order;
+    private boolean twoSepAsOne;
     private final PathHierarchyAggregator.BucketCountThresholds bucketCountThresholds;
 
     PathHierarchyAggregatorFactory(String name,
@@ -41,6 +42,7 @@ class PathHierarchyAggregatorFactory extends ValuesSourceAggregatorFactory<Value
                                    String separator,
                                    int minDepth,
                                    int maxDepth,
+                                   boolean twoSepAsOne,
                                    BucketOrder order,
                                    PathHierarchyAggregator.BucketCountThresholds bucketCountThresholds,
                                    SearchContext context,
@@ -52,6 +54,7 @@ class PathHierarchyAggregatorFactory extends ValuesSourceAggregatorFactory<Value
         this.separator = new BytesRef(separator);
         this.minDepth = minDepth;
         this.maxDepth = maxDepth;
+        this.twoSepAsOne = twoSepAsOne;
         this.order = order;
         this.bucketCountThresholds = bucketCountThresholds;
     }
@@ -82,7 +85,7 @@ class PathHierarchyAggregatorFactory extends ValuesSourceAggregatorFactory<Value
             boolean collectsFromSingleBucket, List<PipelineAggregator> pipelineAggregators,
             Map<String, Object> metaData) throws IOException {
 
-        ValuesSource valuesSourceBytes = new HierarchyValuesSource(valuesSource, separator, minDepth, maxDepth);
+        ValuesSource valuesSourceBytes = new HierarchyValuesSource(valuesSource, separator, minDepth, maxDepth, twoSepAsOne);
         PathHierarchyAggregator.BucketCountThresholds bucketCountThresholds = new
                 PathHierarchyAggregator.BucketCountThresholds(this.bucketCountThresholds);
         if (!InternalOrder.isKeyOrder(order)
@@ -114,12 +117,15 @@ class PathHierarchyAggregatorFactory extends ValuesSourceAggregatorFactory<Value
         private BytesRef separator;
         private int minDepth;
         private int maxDepth;
+        private boolean twoSepAsOne;
 
-        private HierarchyValues(SortedBinaryDocValues valuesSource, BytesRef separator, int minDepth, int maxDepth) {
+        private HierarchyValues(SortedBinaryDocValues valuesSource, BytesRef separator, int minDepth, int maxDepth,
+                                boolean twoSepAsOne) {
             this.valuesSource = valuesSource;
             this.separator = separator;
             this.minDepth = minDepth;
             this.maxDepth = maxDepth;
+            this.twoSepAsOne = twoSepAsOne;
         }
 
         /**
@@ -136,57 +142,62 @@ class PathHierarchyAggregatorFactory extends ValuesSourceAggregatorFactory<Value
                 int t = 0;
                 for (int i=0; i < valuesSource.docValueCount(); i++) {
                     int depth = 0;
-                    int lastOff = 0;
+                    int last_offset_step = 0;
                     BytesRef val = valuesSource.nextValue();
-
                     BytesRefBuilder cleanVal = new BytesRefBuilder();
 
                     for (int offset=0; offset < val.length; offset++) {
-                        //  if it is a separator
+                        // it is a separator
                         if (new BytesRef(val.bytes, val.offset + offset, separator.length).equals(separator)) {
-                            if (offset - lastOff > 1) {
-                                if (cleanVal.length() > 0) {
-                                    cleanVal.append(separator);
+                            // ignore separator at the beginning
+                            if (offset == 0) {
+                                last_offset_step += separator.length;
+                                continue;
+                            }
+
+                            if (minDepth <= depth) {
+                                // two separators following each other
+                                if (offset - last_offset_step == separator.length) {
+                                    if (twoSepAsOne) {
+                                        // ignore the second separator
+                                        last_offset_step = offset;
+                                        continue;
+                                    }
+                                    else {
+                                        BytesRef no_label_bucket = new BytesRef("empty");
+                                        cleanVal.append(separator);
+                                        cleanVal.append(no_label_bucket);
+                                        values[t++].copyBytes(cleanVal);
+                                    }
                                 }
-                                if (minDepth > depth) {
-                                    depth++;
-                                    offset += separator.length - 1;
-                                    lastOff = offset + 1;
-                                    continue;
+                                else {
+                                    cleanVal.append(val.bytes, val.offset + last_offset_step, offset - last_offset_step);
+                                    values[t++].copyBytes(cleanVal);
                                 }
-                                cleanVal.append(val.bytes, val.offset + lastOff, offset - lastOff);
+                            }
+                            if ( !(minDepth <= depth) && (minDepth == depth +1))
+                                last_offset_step = offset += separator.length;
+                            else
+                                last_offset_step = offset;
+                            depth++;
+                            if (maxDepth >= 0 && depth > maxDepth) {
+                                break;
+                            }
+                            count++;
+                            grow();
+                        } else if (offset == val.length - 1) {  // last occurrence and no separator at the end
+                            if (minDepth <= depth) {
+                                cleanVal.append(val.bytes, val.offset + last_offset_step, offset - last_offset_step + 1);
                                 values[t++].copyBytes(cleanVal);
-                                depth++;
-                                if (maxDepth >= 0 && depth > maxDepth) {
-                                    break;
-                                }
-                                offset += separator.length - 1;
-                                lastOff = offset + 1;
-                                count++;
-                                grow();
-                            } else {
-                                lastOff = offset + separator.length;
-                            }
-                        } else if (offset == val.length -1) {
-                            if (cleanVal.length() > 0) {
-                                cleanVal.append(separator);
-                            }
-                            if (depth >= minDepth) {
-                                cleanVal.append(val.bytes, val.offset + lastOff, offset - lastOff + 1);
                             }
                         }
                     }
-                    if (maxDepth >= 0 && depth > maxDepth) {
-                        continue;
-                    }
-                    values[t++].copyBytes(cleanVal);
+
                 }
                 sort();  // sort values that are stored between offsets 0 and count of values
                 return true;
-            } else {
-                grow();
+            } else
                 return false;
-            }
         }
     }
 
@@ -199,17 +210,19 @@ class PathHierarchyAggregatorFactory extends ValuesSourceAggregatorFactory<Value
         private final BytesRef separator;
         private final int minDepth;
         private final int maxDepth;
+        private final boolean twoSepAsOne;
 
-        private HierarchyValuesSource(ValuesSource values, BytesRef separator, int minDepth, int maxDepth){
+        private HierarchyValuesSource(ValuesSource values, BytesRef separator, int minDepth, int maxDepth, boolean twoSepAsOne){
             this.values = values;
             this.separator = separator;
             this.minDepth = minDepth;
             this.maxDepth = maxDepth;
+            this.twoSepAsOne = twoSepAsOne;
         }
 
         @Override
         public SortedBinaryDocValues bytesValues(LeafReaderContext context) throws IOException {
-            return new HierarchyValues(values.bytesValues(context), separator, minDepth, maxDepth);
+            return new HierarchyValues(values.bytesValues(context), separator, minDepth, maxDepth, twoSepAsOne);
         }
 
     }
