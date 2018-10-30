@@ -11,7 +11,7 @@ This is a multi bucket aggregation.
 Installation
 ------------
 
-`bin/plugin --install path_hierarchy --url "https://github.com/opendatasoft/elasticsearch-aggregation-pathhierarchy/releases/download/v6.4.2.0/elasticsearch-aggregation-pathhierarchy-6.4.2.0.zip"`
+`bin/plugin --install path_hierarchy --url "https://github.com/opendatasoft/elasticsearch-aggregation-pathhierarchy/releases/download/v6.4.2.1/elasticsearch-aggregation-pathhierarchy-6.4.2.1.zip"`
 
 
 Usage
@@ -27,6 +27,7 @@ Usage
  - `min_depth`: Set minimum depth level. Default to 0.
  - `max_depth`: Set maximum depth level. `-1` means no limit. Default to 3.
  - `depth`: Retrieve values for specified depth. Shortcut, instead of setting `min_depth` and `max_depth` parameters to the same value.
+ - `two_sep_as_one`: Will consider two separator which follow each other as one. For example with separator `/`, `/root/my_dir` will be equivalent to `/root//my_dir` if set to true, else it will be equivalent to `/root/empty/my_dir`. Default to true. 
 
 Please note that `sum_other_doc_count` is returned alongside aggregation buckets. It returns the sum of doc_count which are not returned from shards due to size/shard_size and so can be used to calibrate size/shard_size.
 
@@ -72,12 +73,6 @@ PUT /filesystem/file/3
   "views": 1
 }
 
-PUT /filesystem/file/4
-{
-  "path": "/My documents/Spreadsheets/Budget_2014.xls",
-  "views": 12
-}
-
 
 
 Path hierarchy request :
@@ -88,10 +83,7 @@ GET /filesystem/file/_search?size=0
     "tree": {
       "path_hierarchy": {
         "field": "path",
-        "separator": "/",
-        "order": [{"_count": "desc"}, {"_key": "asc"}],
-        "min_depth": 0,
-        "max_depth": 3
+        "separator": "/"
       },
       "aggs": {
         "total_views": {
@@ -108,54 +100,54 @@ GET /filesystem/file/_search?size=0
 Result :
 
 {"aggregations": {
-    "tree": {
-      "buckets": [
-        {
-          "key": "My documents",
-          "doc_count": 4,
-          "total_views": {
-            "value": 30
-          },
-          "tree": {
-            "buckets": [
-              {
-                "key": "Spreadsheets",
-                "doc_count": 3,
-                "total_views": {
-                  "value": 29
-                },
-                "tree": {
-                  "buckets": [
-                    {
-                      "key": "Budget_2014.xls",
-                      "doc_count": 2,
-                      "total_views": {
-                        "value": 19
-                      }
-                    },
-                    {
-                      "key": "Budget_2013.xls",
-                      "doc_count": 1,
-                      "total_views": {
-                        "value": 10
-                      }
-                    }
-                  ]
-                }
-              },
-              {
-                "key": "Test.txt",
-                "doc_count": 1,
-                "total_views": {
-                  "value": 1
-                }
-              }
-            ]
-          }
-        }
-      ]
-    }
-  }
+   "tree": {
+     "sum_other_doc_count": 0,
+     "buckets": [
+       {
+         "key": "My documents",
+         "doc_count": 3,
+         "total_views": {
+           "value": 18
+         },
+         "tree": {
+           "buckets": [
+             {
+               "key": "Spreadsheets",
+               "doc_count": 2,
+               "total_views": {
+                 "value": 17
+               },
+               "tree": {
+                 "buckets": [
+                   {
+                     "key": "Budget_2013.xls",
+                     "doc_count": 1,
+                     "total_views": {
+                       "value": 10
+                     }
+                   },
+                   {
+                     "key": "Budget_2014.xls",
+                     "doc_count": 1,
+                     "total_views": {
+                       "value": 7
+                     }
+                   }
+                 ]
+               }
+             },
+             {
+               "key": "Test.txt",
+               "doc_count": 1,
+               "total_views": {
+                 "value": 1
+               }
+             }
+           ]
+         }
+       }
+     ]
+   }
 }
 
 ```
@@ -264,16 +256,16 @@ Plugin versions are available for (at least) all minor versions of Elasticsearch
 The first 3 digits of plugin version is Elasticsearch versioning. The last digit is used for plugin versioning under an elasticsearch version.
 
 To install it, launch this command in Elasticsearch directory replacing the url by the correct link for your Elasticsearch version (see table)
-`./bin/elasticsearch-plugin install https://github.com/opendatasoft/elasticsearch-aggregation-pathhierarchy/releases/download/v6.4.1.0/elasticsearch-aggregation-pathhierarchy-6.4.1.0.zip`
+`./bin/elasticsearch-plugin install https://github.com/opendatasoft/elasticsearch-aggregation-pathhierarchy/releases/download/v6.4.1.1/elasticsearch-aggregation-pathhierarchy-6.4.1.1.zip`
 
 | elasticsearch version | plugin version | plugin url |
 | --------------------- | -------------- | ---------- |
 | 1.6.0 | 1.6.0.4 | https://github.com/opendatasoft/elasticsearch-aggregation-pathhierarchy/releases/download/v1.6.0.4/elasticsearch-aggregation-pathhierarchy-1.6.0.4.zip |
-| 6.0.1 | 6.0.1.0 | https://github.com/opendatasoft/elasticsearch-aggregation-pathhierarchy/releases/download/v6.0.1.0/elasticsearch-aggregation-pathhierarchy-6.0.1.0.zip |
-| 6.1.4 | 6.1.4.0 | https://github.com/opendatasoft/elasticsearch-aggregation-pathhierarchy/releases/download/v6.1.4.0/elasticsearch-aggregation-pathhierarchy-6.1.4.0.zip |
-| 6.2.4 | 6.2.4.0 | https://github.com/opendatasoft/elasticsearch-aggregation-pathhierarchy/releases/download/v6.2.4.0/elasticsearch-aggregation-pathhierarchy-6.2.4.0.zip |
-| 6.3.2 | 6.3.2.0 | https://github.com/opendatasoft/elasticsearch-aggregation-pathhierarchy/releases/download/v6.3.2.0/elasticsearch-aggregation-pathhierarchy-6.3.2.0.zip |
-| 6.4.2 | 6.4.2.0 | https://github.com/opendatasoft/elasticsearch-aggregation-pathhierarchy/releases/download/v6.4.2.0/elasticsearch-aggregation-pathhierarchy-6.4.2.0.zip |
+| 6.0.1 | 6.0.1.1 | https://github.com/opendatasoft/elasticsearch-aggregation-pathhierarchy/releases/download/v6.0.1.1/elasticsearch-aggregation-pathhierarchy-6.0.1.1.zip |
+| 6.1.4 | 6.1.4.1 | https://github.com/opendatasoft/elasticsearch-aggregation-pathhierarchy/releases/download/v6.1.4.1/elasticsearch-aggregation-pathhierarchy-6.1.4.1.zip |
+| 6.2.4 | 6.2.4.1 | https://github.com/opendatasoft/elasticsearch-aggregation-pathhierarchy/releases/download/v6.2.4.1/elasticsearch-aggregation-pathhierarchy-6.2.4.1.zip |
+| 6.3.2 | 6.3.2.1 | https://github.com/opendatasoft/elasticsearch-aggregation-pathhierarchy/releases/download/v6.3.2.1/elasticsearch-aggregation-pathhierarchy-6.3.2.1.zip |
+| 6.4.2 | 6.4.2.1 | https://github.com/opendatasoft/elasticsearch-aggregation-pathhierarchy/releases/download/v6.4.2.1/elasticsearch-aggregation-pathhierarchy-6.4.2.1.zip |
 
 
 License
