@@ -38,6 +38,7 @@ public class PathHierarchyAggregationBuilder extends ValuesSourceAggregationBuil
     public static final ParseField SEPARATOR_FIELD = new ParseField("separator");
     public static final ParseField MIN_DEPTH_FIELD = new ParseField("min_depth");
     public static final ParseField MAX_DEPTH_FIELD = new ParseField("max_depth");
+    public static final ParseField TWO_SEP_AS_ONE_FIELD = new ParseField("two_sep_as_one");
     public static final ParseField DEPTH_FIELD = new ParseField("depth");
     public static final ParseField ORDER_FIELD = new ParseField("order");
     public static final ParseField SIZE_FIELD = new ParseField("size");
@@ -53,6 +54,7 @@ public class PathHierarchyAggregationBuilder extends ValuesSourceAggregationBuil
         PARSER.declareString(PathHierarchyAggregationBuilder::separator, SEPARATOR_FIELD);
         PARSER.declareInt(PathHierarchyAggregationBuilder::minDepth, MIN_DEPTH_FIELD);
         PARSER.declareInt(PathHierarchyAggregationBuilder::maxDepth, MAX_DEPTH_FIELD);
+        PARSER.declareBoolean(PathHierarchyAggregationBuilder::twoSepAsOne, TWO_SEP_AS_ONE_FIELD);
         PARSER.declareInt(PathHierarchyAggregationBuilder::depth, DEPTH_FIELD);
         PARSER.declareInt(PathHierarchyAggregationBuilder::size, SIZE_FIELD);
         PARSER.declareInt(PathHierarchyAggregationBuilder::shardSize, SHARD_SIZE_FIELD);
@@ -67,9 +69,11 @@ public class PathHierarchyAggregationBuilder extends ValuesSourceAggregationBuil
     private static final String DEFAULT_SEPARATOR = "/";
     private static final int DEFAULT_MIN_DEPTH = 0;
     private static final int DEFAULT_MAX_DEPTH = 3;
+    private static final boolean DEFAULT_TWO_SEP_AS_ONE = true;
     private String separator = DEFAULT_SEPARATOR;
     private int minDepth = DEFAULT_MIN_DEPTH;
     private int maxDepth = DEFAULT_MAX_DEPTH;
+    private boolean twoSepAsOne = DEFAULT_TWO_SEP_AS_ONE;
     private int depth = -1;
     private BucketOrder order = BucketOrder.compound(BucketOrder.count(false)); // automatically adds tie-breaker key asc order
     private PathHierarchyAggregator.BucketCountThresholds bucketCountThresholds = new PathHierarchyAggregator.BucketCountThresholds(
@@ -90,6 +94,7 @@ public class PathHierarchyAggregationBuilder extends ValuesSourceAggregationBuil
         separator = in.readString();
         minDepth = in.readOptionalVInt();
         maxDepth = in.readOptionalVInt();
+        twoSepAsOne = in.readOptionalBoolean();
         depth = in.readOptionalVInt();
         order = InternalOrder.Streams.readOrder(in);
     }
@@ -103,6 +108,7 @@ public class PathHierarchyAggregationBuilder extends ValuesSourceAggregationBuil
         out.writeString(separator);
         out.writeOptionalVInt(minDepth);
         out.writeOptionalVInt(maxDepth);
+        out.writeOptionalBoolean(twoSepAsOne);
         out.writeOptionalVInt(depth);
         order.writeTo(out);
     }
@@ -119,6 +125,11 @@ public class PathHierarchyAggregationBuilder extends ValuesSourceAggregationBuil
 
     private PathHierarchyAggregationBuilder maxDepth(int maxDepth) {
         this.maxDepth = maxDepth;
+        return this;
+    }
+
+    private PathHierarchyAggregationBuilder twoSepAsOne(boolean twoSepAsOne) {
+        this.twoSepAsOne = twoSepAsOne;
         return this;
     }
 
@@ -213,7 +224,7 @@ public class PathHierarchyAggregationBuilder extends ValuesSourceAggregationBuil
         }
 
         return new PathHierarchyAggregatorFactory(
-                name, config, separator, minDepth, maxDepth, order, bucketCountThresholds,
+                name, config, separator, minDepth, maxDepth, twoSepAsOne, order, bucketCountThresholds,
                 context, parent, subFactoriesBuilder, metaData);
     }
 
