@@ -23,6 +23,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Arrays;
 
 /**
  * An internal implementation of {@link InternalMultiBucketAggregation} which extends {@link Aggregation}.
@@ -44,15 +45,13 @@ public class InternalPathHierarchy extends InternalMultiBucketAggregation<Intern
         protected long docCount;
         protected InternalAggregations aggregations;
         protected int level;
-        protected String[] path;
         protected String basename;
 
-        public InternalBucket(long docCount, InternalAggregations aggregations, String basename, BytesRef term, int level, String[] path) {
+        public InternalBucket(long docCount, InternalAggregations aggregations, String basename, BytesRef term, int level) {
             termBytes = term;
             this.docCount = docCount;
             this.aggregations = aggregations;
             this.level = level;
-            this.path = path;
             this.basename = basename;
         }
 
@@ -65,10 +64,6 @@ public class InternalPathHierarchy extends InternalMultiBucketAggregation<Intern
             aggregations = InternalAggregations.readAggregations(in);
             level = in.readInt();
             int path_length = in.readInt();
-            path = new String[path_length];
-            for (int i = 0; i < path_length; i++) {
-                path[i] = in.readString();
-            }
             basename = in.readString();
         }
 
@@ -81,10 +76,6 @@ public class InternalPathHierarchy extends InternalMultiBucketAggregation<Intern
             out.writeLong(docCount);
             aggregations.writeTo(out);
             out.writeInt(level);
-            out.writeInt(path.length);
-            for (String path: this.path) {
-                out.writeString(path);
-            }
             out.writeString(basename);
         }
 
@@ -219,7 +210,7 @@ public class InternalPathHierarchy extends InternalMultiBucketAggregation<Intern
     @Override
     public InternalBucket createBucket(InternalAggregations aggregations, InternalBucket prototype) {
         return new InternalBucket(prototype.docCount, aggregations, prototype.basename, prototype.termBytes,
-                prototype.level, prototype.path);
+                prototype.level);
     }
 
     @Override
@@ -276,44 +267,8 @@ public class InternalPathHierarchy extends InternalMultiBucketAggregation<Intern
             reducedBuckets[i] = ordered.pop();
         }
 
-        // cast the buckets set-list to a Map object which is a tree of buckets containers
-        Map<String, List<InternalBucket>> res = new HashMap<>();
-        for (InternalBucket bucket: reducedBuckets) {
-            String key = bucket.path.length > 0 ? String.join(separator.utf8ToString(), bucket.path) : separator.utf8ToString();
-
-            List<InternalBucket> listBuckets = res.get(key);
-            if (listBuckets == null) {
-                listBuckets = new ArrayList<>();
-            }
-            listBuckets.add(bucket);
-            res.put(key, listBuckets);
-        }
-
-        return new InternalPathHierarchy(getName(), createBucketListFromMap(res), order, requiredSize, shardSize,
+        return new InternalPathHierarchy(getName(), Arrays.asList(reducedBuckets), order, requiredSize, shardSize,
                 otherDocCount, separator, pipelineAggregators(), getMetaData());
-    }
-
-    private List<InternalBucket> createBucketListFromMap(Map<String, List<InternalBucket>> buckets) {
-        List<InternalBucket> res = new ArrayList<>();
-
-        if (buckets.size() > 0) {
-            List<InternalBucket> rootList = buckets.get(separator.utf8ToString());
-            createBucketListFromMapRecurse(res, buckets, rootList);
-        }
-
-        return res;
-    }
-
-    private void createBucketListFromMapRecurse(List<InternalBucket> res, Map<String, List<InternalBucket>> mapBuckets,
-                                                List<InternalBucket> buckets) {
-        for (InternalBucket bucket: buckets) {
-            res.add(bucket);
-
-            List<InternalBucket> children =  mapBuckets.get(bucket.getKey());
-            if (children != null && ! children.isEmpty()) {
-                createBucketListFromMapRecurse(res, mapBuckets, children);
-            }
-        }
     }
 
     private void doXContentInternal(XContentBuilder builder, Params params, InternalBucket currentBucket,

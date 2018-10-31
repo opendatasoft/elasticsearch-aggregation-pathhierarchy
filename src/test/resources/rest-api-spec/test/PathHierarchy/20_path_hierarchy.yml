@@ -152,7 +152,7 @@ setup:
   - match: { aggregations.tree.buckets.1.total_views.value: 10 }
 
 
-# test two_sep_as_one
+# test keep_blank_path
   - do:
       search:
         body: {
@@ -163,7 +163,7 @@ setup:
                 "field" : "path",
                 "separator": "/",
                 "order": [ {"_count": "desc"}, {"_key": "asc"}],
-                "two_sep_as_one": "false"
+                "keep_blank_path": "true"
               },
               "aggs": {
                 "total_views": {
@@ -190,18 +190,63 @@ setup:
   - match: { aggregations.tree.buckets.0.tree.buckets.1.doc_count: 1 }
   - match: { aggregations.tree.buckets.0.tree.buckets.1.total_views.value: 1 }
 
-  - match: { aggregations.tree.buckets.0.tree.buckets.0.tree.buckets.0.key: "Budget_2013.xls" }
+  - match: { aggregations.tree.buckets.0.tree.buckets.0.tree.buckets.0.key: "" }
   - match: { aggregations.tree.buckets.0.tree.buckets.0.tree.buckets.0.doc_count: 1 }
-  - match: { aggregations.tree.buckets.0.tree.buckets.0.tree.buckets.0.total_views.value: 10 }
+  - match: { aggregations.tree.buckets.0.tree.buckets.0.tree.buckets.0.total_views.value: 12 }
 
-  - match: { aggregations.tree.buckets.0.tree.buckets.0.tree.buckets.1.key: "Budget_2014.xls" }
+  - match: { aggregations.tree.buckets.0.tree.buckets.0.tree.buckets.1.key: "Budget_2013.xls" }
   - match: { aggregations.tree.buckets.0.tree.buckets.0.tree.buckets.1.doc_count: 1 }
-  - match: { aggregations.tree.buckets.0.tree.buckets.0.tree.buckets.1.total_views.value: 7 }
+  - match: { aggregations.tree.buckets.0.tree.buckets.0.tree.buckets.1.total_views.value: 10 }
 
-  - match: { aggregations.tree.buckets.0.tree.buckets.0.tree.buckets.2.key: "empty" }
+  - match: { aggregations.tree.buckets.0.tree.buckets.0.tree.buckets.2.key: "Budget_2014.xls" }
   - match: { aggregations.tree.buckets.0.tree.buckets.0.tree.buckets.2.doc_count: 1 }
-  - match: { aggregations.tree.buckets.0.tree.buckets.0.tree.buckets.2.total_views.value: 12 }
+  - match: { aggregations.tree.buckets.0.tree.buckets.0.tree.buckets.2.total_views.value: 7 }
 
-  - match: { aggregations.tree.buckets.0.tree.buckets.0.tree.buckets.2.tree.buckets.0.key: "Budget_2014.xls" }
-  - match: { aggregations.tree.buckets.0.tree.buckets.0.tree.buckets.2.tree.buckets.0.doc_count: 1 }
-  - match: { aggregations.tree.buckets.0.tree.buckets.0.tree.buckets.2.tree.buckets.0.total_views.value: 12 }
+  - match: { aggregations.tree.buckets.0.tree.buckets.0.tree.buckets.0.tree.buckets.0.key: "Budget_2014.xls" }
+  - match: { aggregations.tree.buckets.0.tree.buckets.0.tree.buckets.0.tree.buckets.0.doc_count: 1 }
+  - match: { aggregations.tree.buckets.0.tree.buckets.0.tree.buckets.0.tree.buckets.0.total_views.value: 12 }
+
+# test multi characters separator
+  - do:
+      search:
+        body: {
+          "size" : 0,
+          "aggs" : {
+            "tree" : {
+              "path_hierarchy" : {
+                "field" : "path",
+                "separator": "doc",
+                "order": [{"_key": "asc"}],
+              },
+              "aggs": {
+                "total_views": {
+                  "sum": {
+                    "field": "views"
+                  }
+                }
+              }
+            }
+          }
+        }
+
+  - match: { hits.total: 4 }
+
+  - match: { aggregations.tree.buckets.0.key: "/My " }
+  - match: { aggregations.tree.buckets.0.doc_count: 4 }
+  - match: { aggregations.tree.buckets.0.total_views.value: 30 }
+
+  - match: { aggregations.tree.buckets.0.tree.buckets.0.key: "uments/Spreadsheets//Budget_2014.xls" }
+  - match: { aggregations.tree.buckets.0.tree.buckets.0.doc_count: 1 }
+  - match: { aggregations.tree.buckets.0.tree.buckets.0.total_views.value: 12 }
+
+  - match: { aggregations.tree.buckets.0.tree.buckets.1.key: "uments/Spreadsheets/Budget_2013.xls" }
+  - match: { aggregations.tree.buckets.0.tree.buckets.1.doc_count: 1 }
+  - match: { aggregations.tree.buckets.0.tree.buckets.1.total_views.value: 10 }
+
+  - match: { aggregations.tree.buckets.0.tree.buckets.2.key: "uments/Spreadsheets/Budget_2014.xls" }
+  - match: { aggregations.tree.buckets.0.tree.buckets.2.doc_count: 1 }
+  - match: { aggregations.tree.buckets.0.tree.buckets.2.total_views.value: 7 }
+
+  - match: { aggregations.tree.buckets.0.tree.buckets.3.key: "uments/Test.txt" }
+  - match: { aggregations.tree.buckets.0.tree.buckets.3.doc_count: 1 }
+  - match: { aggregations.tree.buckets.0.tree.buckets.3.total_views.value: 1 }

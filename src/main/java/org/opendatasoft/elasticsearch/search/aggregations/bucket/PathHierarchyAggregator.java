@@ -198,12 +198,12 @@ public class PathHierarchyAggregator extends BucketsAggregator {
         InternalPathHierarchy.InternalBucket spare = null;
         for (int i = 0; i < bucketOrds.size(); i++) {
             if (spare == null) {
-                spare = new InternalPathHierarchy.InternalBucket(0, null, null, new BytesRef(), 0, null);
+                spare = new InternalPathHierarchy.InternalBucket(0, null, null, new BytesRef(), 0);
             }
             BytesRef term = new BytesRef();
             bucketOrds.get(i, term);
 
-            String [] paths = term.utf8ToString().split(Pattern.quote(separator.utf8ToString()));
+            String [] paths = term.utf8ToString().split(Pattern.quote(separator.utf8ToString()), -1);
 
             spare.termBytes = BytesRef.deepCopyOf(term);
             spare.docCount = bucketDocCount(i);
@@ -211,7 +211,6 @@ public class PathHierarchyAggregator extends BucketsAggregator {
             spare.aggregations = bucketAggregations(i);
             spare.level = paths.length - 1;
             spare.basename = paths[paths.length - 1];
-            spare.path = Arrays.copyOf(paths, paths.length - 1);
             spare.bucketOrd = i;
             spare = ordered.insertWithOverflow(spare);
             if (spare == null) {

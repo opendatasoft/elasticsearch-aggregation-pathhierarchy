@@ -27,7 +27,7 @@ Usage
  - `min_depth`: Set minimum depth level. Default to 0.
  - `max_depth`: Set maximum depth level. `-1` means no limit. Default to 3.
  - `depth`: Retrieve values for specified depth. Shortcut, instead of setting `min_depth` and `max_depth` parameters to the same value.
- - `two_sep_as_one`: Will consider two separator which follow each other as one. For example with separator `/`, `/root/my_dir` will be equivalent to `/root//my_dir` if set to true, else it will be equivalent to `/root/empty/my_dir`. Default to true. 
+ - `keep_blank_path`: Keep blank path as bucket. if this option is set to false, chained separator will be ignored. Default to false. 
 
 Please note that `sum_other_doc_count` is returned alongside aggregation buckets. It returns the sum of doc_count which are not returned from shards due to size/shard_size and so can be used to calibrate size/shard_size.
 
@@ -46,9 +46,7 @@ PUT /filesystem
     "file": {
       "properties": {
         "path": {
-          "type": "keyword",
-          "index": false,
-          "doc_values": true
+          "type": "keyword"
         }
       }
     }
