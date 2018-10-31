@@ -3,6 +3,7 @@ package org.opendatasoft.elasticsearch.search.aggregations.bucket;
 import org.apache.lucene.index.LeafReaderContext;
 import org.apache.lucene.util.BytesRef;
 import org.apache.lucene.util.BytesRefBuilder;
+import org.apache.lucene.util.FutureArrays;
 import org.elasticsearch.index.fielddata.SortedBinaryDocValues;
 import org.elasticsearch.index.fielddata.SortingBinaryDocValues;
 import org.elasticsearch.search.aggregations.Aggregator;
@@ -34,7 +35,7 @@ class PathHierarchyAggregatorFactory extends ValuesSourceAggregatorFactory<Value
     private int minDepth;
     private int maxDepth;
     private BucketOrder order;
-    private boolean twoSepAsOne;
+    private boolean keepBlankPath;
     private final PathHierarchyAggregator.BucketCountThresholds bucketCountThresholds;
 
     PathHierarchyAggregatorFactory(String name,
@@ -42,7 +43,7 @@ class PathHierarchyAggregatorFactory extends ValuesSourceAggregatorFactory<Value
                                    String separator,
                                    int minDepth,
                                    int maxDepth,
-                                   boolean twoSepAsOne,
+                                   boolean keepBlankPath,
                                    BucketOrder order,
                                    PathHierarchyAggregator.BucketCountThresholds bucketCountThresholds,
                                    SearchContext context,
@@ -54,7 +55,7 @@ class PathHierarchyAggregatorFactory extends ValuesSourceAggregatorFactory<Value
         this.separator = new BytesRef(separator);
         this.minDepth = minDepth;
         this.maxDepth = maxDepth;
-        this.twoSepAsOne = twoSepAsOne;
+        this.keepBlankPath = keepBlankPath;
         this.order = order;
         this.bucketCountThresholds = bucketCountThresholds;
     }
@@ -85,7 +86,7 @@ class PathHierarchyAggregatorFactory extends ValuesSourceAggregatorFactory<Value
             boolean collectsFromSingleBucket, List<PipelineAggregator> pipelineAggregators,
             Map<String, Object> metaData) throws IOException {
 
-        ValuesSource valuesSourceBytes = new HierarchyValuesSource(valuesSource, separator, minDepth, maxDepth, twoSepAsOne);
+        ValuesSource valuesSourceBytes = new HierarchyValuesSource(valuesSource, separator, minDepth, maxDepth, keepBlankPath);
         PathHierarchyAggregator.BucketCountThresholds bucketCountThresholds = new
                 PathHierarchyAggregator.BucketCountThresholds(this.bucketCountThresholds);
         if (!InternalOrder.isKeyOrder(order)
@@ -117,15 +118,15 @@ class PathHierarchyAggregatorFactory extends ValuesSourceAggregatorFactory<Value
         private BytesRef separator;
         private int minDepth;
         private int maxDepth;
-        private boolean twoSepAsOne;
+        private boolean keepBlankPath;
 
         private HierarchyValues(SortedBinaryDocValues valuesSource, BytesRef separator, int minDepth, int maxDepth,
-                                boolean twoSepAsOne) {
+                                boolean keepBlankPath) {
             this.valuesSource = valuesSource;
             this.separator = separator;
             this.minDepth = minDepth;
             this.maxDepth = maxDepth;
-            this.twoSepAsOne = twoSepAsOne;
+            this.keepBlankPath = keepBlankPath;
         }
 
         /**
@@ -137,60 +138,60 @@ class PathHierarchyAggregatorFactory extends ValuesSourceAggregatorFactory<Value
         @Override
         public boolean advanceExact(int docId) throws IOException {
             if (valuesSource.advanceExact(docId)) {
-                count = valuesSource.docValueCount();
-                grow();
+                count = 0;
                 int t = 0;
                 for (int i=0; i < valuesSource.docValueCount(); i++) {
                     int depth = 0;
-                    int last_offset_step = 0;
                     BytesRef val = valuesSource.nextValue();
                     BytesRefBuilder cleanVal = new BytesRefBuilder();
+                    int startNewValOffset = -1;
 
                     for (int offset=0; offset < val.length; offset++) {
                         // it is a separator
-                        if (new BytesRef(val.bytes, val.offset + offset, separator.length).equals(separator)) {
+                        if (val.length - offset >= separator.length &&
+                                FutureArrays.equals(
+                                        separator.bytes, separator.offset, separator.offset + separator.length,
+                                        val.bytes, val.offset + offset, val.offset + offset + separator.length)) {
                             // ignore separator at the beginning
                             if (offset == 0) {
-                                last_offset_step += separator.length;
+                                offset += separator.length -1;
                                 continue;
                             }
 
-                            if (minDepth <= depth) {
-                                // two separators following each other
-                                if (offset - last_offset_step == separator.length) {
-                                    if (twoSepAsOne) {
-                                        // ignore the second separator
-                                        last_offset_step = offset;
-                                        continue;
-                                    }
-                                    else {
-                                        BytesRef no_label_bucket = new BytesRef("empty");
-                                        cleanVal.append(separator);
-                                        cleanVal.append(no_label_bucket);
-                                        values[t++].copyBytes(cleanVal);
-                                    }
-                                }
-                                else {
-                                    cleanVal.append(val.bytes, val.offset + last_offset_step, offset - last_offset_step);
+                            // A new path needs to be add
+                            if (startNewValOffset != -1) {
+                                if (depth >= minDepth) {
+                                    cleanVal.append(val.bytes, val.offset + startNewValOffset, offset - startNewValOffset);
                                     values[t++].copyBytes(cleanVal);
+                                    cleanVal.append(separator);
                                 }
+                                startNewValOffset = -1;
+                                depth ++;
+                            // two separators following each other
+                            } else if (keepBlankPath) {
+                                count++;
+                                grow();
+                                values[t++].copyBytes(cleanVal);
+                                cleanVal.append(separator);
+                                depth ++;
                             }
-                            if ( !(minDepth <= depth) && (minDepth == depth +1))
-                                last_offset_step = offset += separator.length;
-                            else
-                                last_offset_step = offset;
-                            depth++;
+
                             if (maxDepth >= 0 && depth > maxDepth) {
                                 break;
                             }
-                            count++;
-                            grow();
-                        } else if (offset == val.length - 1) {  // last occurrence and no separator at the end
-                            if (minDepth <= depth) {
-                                cleanVal.append(val.bytes, val.offset + last_offset_step, offset - last_offset_step + 1);
-                                values[t++].copyBytes(cleanVal);
+                            offset += separator.length - 1;
+                        } else {
+                            if (startNewValOffset == -1) {
+                                startNewValOffset = offset;
+                                count++;
+                                grow();
                             }
                         }
+                    }
+
+                    if (startNewValOffset != -1 && minDepth <= depth) {
+                        cleanVal.append(val.bytes, val.offset + startNewValOffset, val.length - startNewValOffset);
+                        values[t++].copyBytes(cleanVal);
                     }
 
                 }
