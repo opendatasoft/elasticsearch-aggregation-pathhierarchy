@@ -95,7 +95,7 @@ class PathHierarchyAggregatorFactory extends ValuesSourceAggregatorFactory<Value
             // heuristic to avoid any wrong-ranking caused by distributed
             // counting
             bucketCountThresholds.setShardSize(BucketUtils.suggestShardSideQueueSize(bucketCountThresholds.getRequiredSize(),
-                    context.numberOfShards()));
+                    context.numberOfShards() == 1));
         }
         bucketCountThresholds.ensureValidity();
         return new PathHierarchyAggregator(
