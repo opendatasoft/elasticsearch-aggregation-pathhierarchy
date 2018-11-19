@@ -1,12 +1,4 @@
-Properties props = new Properties()
-props.load(project.file('gradle.properties').newDataInputStream())
-def elasticVersion = props.getProperty('elasticVersion')
-def pluginVersion = props.getProperty('pluginVersion')
-
 buildscript {
-    Properties props = new Properties()
-    props.load(project.file('gradle.properties').newDataInputStream())
-    def elasticVersion = props.getProperty('elasticVersion')
     repositories {
         mavenLocal()
         mavenCentral()
@@ -14,30 +6,33 @@ buildscript {
     }
 
     dependencies {
-        classpath "org.elasticsearch.gradle:build-tools:${elasticVersion}"
+        classpath "org.elasticsearch.gradle:build-tools:${es_version}"
     }
 }
 
 group = 'org.elasticsearch.plugin'
-version = pluginVersion
+version = "${plugin_version}"
 
 apply plugin: 'java'
 apply plugin: 'idea'
 apply plugin: 'elasticsearch.esplugin'
+
+// license of this project
+licenseFile = rootProject.file('LICENSE')
+noticeFile = rootProject.file('README.md')
+
 
 esplugin {
     name 'pathhierarchy-aggregation'
     description 'Return a path hierarchy aggregation'
     classname 'org.opendatasoft.elasticsearch.plugin.PathHierarchyAggregation'
     licenseFile = rootProject.file('LICENSE')
+    noticeFile = rootProject.file('README.md')
 }
 
 dependencies {
-    compile "org.elasticsearch:elasticsearch:${elasticVersion}"
-    testCompile "org.elasticsearch.test:framework:${elasticVersion}"
+    compile "org.elasticsearch:elasticsearch:${es_version}"
 }
-
-test.enabled = true
 
 // Skip license headers check
 licenseHeaders.enabled = false
@@ -45,8 +40,6 @@ licenseHeaders.enabled = false
 // Use elasticsearch checkstyle rules
 checkstyleTest.enabled = true
 
-licenseFile = rootProject.file('LICENSE')
-noticeFile = rootProject.file('README.md')
 dependencyLicenses.enabled = true
 
 thirdPartyAudit.enabled = true
