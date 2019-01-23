@@ -63,7 +63,6 @@ public class InternalPathHierarchy extends InternalMultiBucketAggregation<Intern
             docCount = in.readLong();
             aggregations = InternalAggregations.readAggregations(in);
             level = in.readInt();
-            int path_length = in.readInt();
             basename = in.readString();
         }
 
