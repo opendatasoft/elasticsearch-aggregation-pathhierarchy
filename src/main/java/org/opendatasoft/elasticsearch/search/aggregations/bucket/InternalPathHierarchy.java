@@ -7,12 +7,9 @@ import org.elasticsearch.common.io.stream.StreamOutput;
 import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.search.aggregations.Aggregation;
 import org.elasticsearch.search.aggregations.Aggregations;
-import org.elasticsearch.search.aggregations.KeyComparable;
-import org.elasticsearch.search.aggregations.BucketOrder;
 import org.elasticsearch.search.aggregations.bucket.MultiBucketsAggregation;
 import org.elasticsearch.search.aggregations.InternalAggregation;
 import org.elasticsearch.search.aggregations.InternalAggregations;
-import org.elasticsearch.search.aggregations.InternalOrder;
 import org.elasticsearch.search.aggregations.InternalMultiBucketAggregation;
 import org.elasticsearch.search.aggregations.pipeline.PipelineAggregator;
 
@@ -38,7 +35,7 @@ public class InternalPathHierarchy extends InternalMultiBucketAggregation<Intern
      * @see MultiBucketsAggregation.Bucket
      */
     public static class InternalBucket extends InternalMultiBucketAggregation.InternalBucket implements
-            PathHierarchy.Bucket, KeyComparable<InternalBucket> {
+            PathHierarchy.Bucket, PathHierarchyComparable<InternalBucket> {
 
         BytesRef termBytes;
         long bucketOrd;
@@ -88,9 +85,37 @@ public class InternalPathHierarchy extends InternalMultiBucketAggregation<Intern
             return termBytes.utf8ToString();
         }
 
+        private int compareLevel(InternalBucket other) {
+            if (level != other.level) {
+                return termBytes.compareTo(other.termBytes);
+            }
+            return 0;
+        }
+
         @Override
-        public int compareKey(InternalPathHierarchy.InternalBucket other) {
-            return termBytes.compareTo(other.termBytes);
+        public int compareKey(InternalPathHierarchy.InternalBucket other, boolean isDesc) {
+            int levelCompare = compareLevel(other);
+
+            if (levelCompare != 0) {
+                return levelCompare;
+            }
+
+            int res = termBytes.compareTo(other.termBytes);
+
+            return isDesc ? -res : res;
+        }
+
+        @Override
+        public int compareCount(InternalPathHierarchy.InternalBucket other, boolean isDesc) {
+            int levelCompare = compareLevel(other);
+
+            if (levelCompare != 0) {
+                return levelCompare;
+            }
+
+            int res = Long.compare(getDocCount(), other.getDocCount());
+
+            return isDesc ? -res : res;
         }
 
         @Override

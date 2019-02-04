@@ -13,9 +13,7 @@ import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.index.fielddata.SortedBinaryDocValues;
 import org.elasticsearch.search.aggregations.Aggregator;
 import org.elasticsearch.search.aggregations.AggregatorFactories;
-import org.elasticsearch.search.aggregations.BucketOrder;
 import org.elasticsearch.search.aggregations.InternalAggregation;
-import org.elasticsearch.search.aggregations.InternalOrder;
 import org.elasticsearch.search.aggregations.LeafBucketCollector;
 import org.elasticsearch.search.aggregations.LeafBucketCollectorBase;
 import org.elasticsearch.search.aggregations.bucket.BucketsAggregator;
@@ -137,7 +135,7 @@ public class PathHierarchyAggregator extends BucketsAggregator {
         this.valuesSource = valuesSource;
         this.separator = separator;
         bucketOrds = new BytesRefHash(1, context.bigArrays());
-        this.order = InternalOrder.validate(order, null);
+        this.order = InternalOrder.validate(order, this);
         this.bucketCountThresholds = bucketCountThresholds;
     }
 
