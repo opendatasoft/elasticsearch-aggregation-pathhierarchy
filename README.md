@@ -27,7 +27,8 @@ Usage
  - `min_depth`: Set minimum depth level. Default to 0.
  - `max_depth`: Set maximum depth level. `-1` means no limit. Default to 3.
  - `depth`: Retrieve values for specified depth. Shortcut, instead of setting `min_depth` and `max_depth` parameters to the same value.
- - `keep_blank_path`: Keep blank path as bucket. if this option is set to false, chained separator will be ignored. Default to false. 
+ - `keep_blank_path`: Keep blank path as bucket. if this option is set to false, chained separator will be ignored. Default to false.
+ - `min_doc_count`: Return buckets containing at least `min_doc_count` document. Default to 0
 
 Please note that `sum_other_doc_count` is returned alongside aggregation buckets. It returns the sum of doc_count which are not returned from shards due to size/shard_size and so can be used to calibrate size/shard_size.
 
