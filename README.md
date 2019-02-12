@@ -30,7 +30,7 @@ Usage
  - `keep_blank_path`: Keep blank path as bucket. if this option is set to false, chained separator will be ignored. Default to false.
  - `min_doc_count`: Return buckets containing at least `min_doc_count` document. Default to 0
 
-Please note that `sum_other_doc_count` is returned alongside aggregation buckets. It returns the sum of doc_count which are not returned from shards due to size/shard_size and so can be used to calibrate size/shard_size.
+Please note that `sum_other_hierarchy_nodes` is returned alongside with the root aggregation bucket. It returns the sum of path_hierarchy tree nodes which are not returned from shards due to size/shard_size and so can be used to calibrate size/shard_size.
 
 
 Examples

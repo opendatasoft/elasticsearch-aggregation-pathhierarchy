@@ -31,6 +31,7 @@ public class PathSortedTree<K, T> implements Iterable<T>{
     }
 
     public void add(K[] path, T element) {
+        /* Please note that paths in path must be descending-sorted by level. */
         Node<K, T> currentNode = root;
         for (K k : path) {
             boolean newChild = true;

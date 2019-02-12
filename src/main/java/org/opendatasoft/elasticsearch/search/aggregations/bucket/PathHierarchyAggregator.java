@@ -196,7 +196,6 @@ public class PathHierarchyAggregator extends BucketsAggregator {
 
         // build buckets and store them sorted
         final int size = (int) Math.min(bucketOrds.size(), bucketCountThresholds.getShardSize());
-        long otherDocCount = 0;
 
         PathSortedTree<String, InternalPathHierarchy.InternalBucket> pathSortedTree = new PathSortedTree<>(order.comparator(this), size);
 
@@ -209,10 +208,9 @@ public class PathHierarchyAggregator extends BucketsAggregator {
             String [] paths = term.utf8ToString().split(Pattern.quote(separator.utf8ToString()), -1);
 
             spare.termBytes = BytesRef.deepCopyOf(term);
-            spare.docCount = bucketDocCount(i);
-            otherDocCount += spare.docCount;
             spare.aggregations = bucketAggregations(i);
             spare.level = paths.length - 1;
+            spare.docCount = bucketDocCount(i);
             spare.basename = paths[paths.length - 1];
             spare.bucketOrd = i;
             spare.paths = paths;
@@ -224,15 +222,16 @@ public class PathHierarchyAggregator extends BucketsAggregator {
 
         // Get the top buckets
         final List<InternalPathHierarchy.InternalBucket> list = new ArrayList<>(size);
+        long otherHierarchyNodes = pathSortedTree.getFullSize();
         Iterator<InternalPathHierarchy.InternalBucket> iterator = pathSortedTree.consumer();
         for (int i = 0; i < size; i++) {
             final InternalPathHierarchy.InternalBucket bucket = iterator.next();
             list.add(bucket);
-            otherDocCount -= bucket.docCount;
+            otherHierarchyNodes -= 1;
         }
 
         return new InternalPathHierarchy(name, list, order, minDocCount, bucketCountThresholds.getRequiredSize(),
-                bucketCountThresholds.getShardSize(), otherDocCount, separator, pipelineAggregators(), metaData());
+                bucketCountThresholds.getShardSize(), otherHierarchyNodes, separator, pipelineAggregators(), metaData());
     }
 
     @Override
