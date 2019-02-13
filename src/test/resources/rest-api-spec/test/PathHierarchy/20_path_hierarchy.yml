@@ -251,21 +251,21 @@ setup:
   - match: { aggregations.tree.buckets.0.tree.buckets.3.doc_count: 1 }
   - match: { aggregations.tree.buckets.0.tree.buckets.3.total_views.value: 1 }
 
-# test sum_other_hierarchy_nodes
-  - do:
-      search:
-        body: {
-          "size" : 0,
-          "aggs" : {
-            "tree" : {
-              "path_hierarchy" : {
-                "field" : "path",
-                "size": 1
-              }
-            }
-          }
-        }
-
-  - match: { hits.total: 4 }
-
-  - match: { aggregations.tree.sum_other_hierarchy_nodes: 4 }
+## test sum_other_hierarchy_nodes
+#  - do:
+#      search:
+#        body: {
+#          "size" : 0,
+#          "aggs" : {
+#            "tree" : {
+#              "path_hierarchy" : {
+#                "field" : "path",
+#                "size": 1
+#              }
+#            }
+#          }
+#        }
+#
+#  - match: { hits.total: 4 }
+#
+#  - match: { aggregations.tree.sum_other_hierarchy_nodes: 4 }
