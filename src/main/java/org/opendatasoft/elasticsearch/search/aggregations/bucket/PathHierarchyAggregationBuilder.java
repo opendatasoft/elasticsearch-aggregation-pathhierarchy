@@ -8,8 +8,8 @@ import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.common.xcontent.XContentParser;
 import org.elasticsearch.search.aggregations.AggregationBuilder;
 import org.elasticsearch.search.aggregations.AggregatorFactories;
-import org.elasticsearch.search.aggregations.AggregatorFactories.Builder;
 import org.elasticsearch.search.aggregations.AggregatorFactory;
+import org.elasticsearch.search.aggregations.AggregatorFactories.Builder;
 import org.elasticsearch.search.aggregations.BucketOrder;
 import org.elasticsearch.search.aggregations.InternalOrder;
 import org.elasticsearch.search.aggregations.bucket.MultiBucketAggregationBuilder;
@@ -43,6 +43,7 @@ public class PathHierarchyAggregationBuilder extends ValuesSourceAggregationBuil
     public static final ParseField ORDER_FIELD = new ParseField("order");
     public static final ParseField SIZE_FIELD = new ParseField("size");
     public static final ParseField SHARD_SIZE_FIELD = new ParseField("shard_size");
+    public static final ParseField MIN_DOC_COUNT_FIELD = new ParseField("min_doc_count");
 
     public static final PathHierarchyAggregator.BucketCountThresholds DEFAULT_BUCKET_COUNT_THRESHOLDS = new
             PathHierarchyAggregator.BucketCountThresholds(10, -1);
@@ -57,6 +58,7 @@ public class PathHierarchyAggregationBuilder extends ValuesSourceAggregationBuil
         PARSER.declareBoolean(PathHierarchyAggregationBuilder::keepBlankPath, KEEP_BLANK_PATH);
         PARSER.declareInt(PathHierarchyAggregationBuilder::depth, DEPTH_FIELD);
         PARSER.declareInt(PathHierarchyAggregationBuilder::size, SIZE_FIELD);
+        PARSER.declareLong(PathHierarchyAggregationBuilder::minDocCount, MIN_DOC_COUNT_FIELD);
         PARSER.declareInt(PathHierarchyAggregationBuilder::shardSize, SHARD_SIZE_FIELD);
         PARSER.declareObjectArray(PathHierarchyAggregationBuilder::order, (p, c) -> InternalOrder.Parser.parseOrderParam(p),
                 ORDER_FIELD);
@@ -74,6 +76,7 @@ public class PathHierarchyAggregationBuilder extends ValuesSourceAggregationBuil
     private int minDepth = DEFAULT_MIN_DEPTH;
     private int maxDepth = DEFAULT_MAX_DEPTH;
     private boolean keepBlankPath = DEFAULT_KEEP_BLANK_PATH;
+    private long minDocCount = 0;
     private int depth = -1;
     private BucketOrder order = BucketOrder.compound(BucketOrder.count(false)); // automatically adds tie-breaker key asc order
     private PathHierarchyAggregator.BucketCountThresholds bucketCountThresholds = new PathHierarchyAggregator.BucketCountThresholds(
@@ -92,6 +95,7 @@ public class PathHierarchyAggregationBuilder extends ValuesSourceAggregationBuil
         super(in, ValuesSourceType.ANY);
         bucketCountThresholds = new PathHierarchyAggregator.BucketCountThresholds(in);
         separator = in.readString();
+        minDocCount = in.readVLong();
         minDepth = in.readOptionalVInt();
         maxDepth = in.readOptionalVInt();
         keepBlankPath = in.readOptionalBoolean();
@@ -108,6 +112,7 @@ public class PathHierarchyAggregationBuilder extends ValuesSourceAggregationBuil
         keepBlankPath = clone.keepBlankPath;
         depth = clone.depth;
         order = clone.order;
+        minDocCount = clone.minDocCount;
         this.bucketCountThresholds = new PathHierarchyAggregator.BucketCountThresholds(clone.bucketCountThresholds);
     }
 
@@ -123,6 +128,7 @@ public class PathHierarchyAggregationBuilder extends ValuesSourceAggregationBuil
     protected void innerWriteTo(StreamOutput out) throws IOException {
         bucketCountThresholds.writeTo(out);
         out.writeString(separator);
+        out.writeVLong(minDocCount);
         out.writeOptionalVInt(minDepth);
         out.writeOptionalVInt(maxDepth);
         out.writeOptionalBoolean(keepBlankPath);
@@ -191,6 +197,17 @@ public class PathHierarchyAggregationBuilder extends ValuesSourceAggregationBuil
         return this;
     }
 
+    /** Set the minimum count of matching documents that buckets need to have
+     *  and return this builder so that calls can be chained. */
+    public PathHierarchyAggregationBuilder minDocCount(long minDocCount) {
+        if (minDocCount < 0) {
+            throw new IllegalArgumentException(
+                    "[minDocCount] must be greater than or equal to 0. Found [" + minDocCount + "] in [" + name + "]");
+        }
+        this.minDocCount = minDocCount;
+        return this;
+    }
+
     /**
      * Returns the number of term buckets currently configured
      */
@@ -241,7 +258,7 @@ public class PathHierarchyAggregationBuilder extends ValuesSourceAggregationBuil
         }
 
         return new PathHierarchyAggregatorFactory(
-                name, config, separator, minDepth, maxDepth, keepBlankPath, order, bucketCountThresholds,
+                name, config, separator, minDepth, maxDepth, keepBlankPath, order, minDocCount, bucketCountThresholds,
                 context, parent, subFactoriesBuilder, metaData);
     }
 
@@ -253,6 +270,8 @@ public class PathHierarchyAggregationBuilder extends ValuesSourceAggregationBuil
             builder.field(ORDER_FIELD.getPreferredName());
             order.toXContent(builder, params);
         }
+
+        builder.field(MIN_DOC_COUNT_FIELD.getPreferredName(), minDocCount);
 
         if (!separator.equals(DEFAULT_SEPARATOR)) {
             builder.field(SEPARATOR_FIELD.getPreferredName(), separator);
@@ -289,6 +308,7 @@ public class PathHierarchyAggregationBuilder extends ValuesSourceAggregationBuil
                 && Objects.equals(maxDepth, other.maxDepth)
                 && Objects.equals(depth, other.depth)
                 && Objects.equals(order, other.order)
+                && Objects.equals(minDocCount, other.minDocCount)
                 && Objects.equals(bucketCountThresholds, other.bucketCountThresholds);
     }
 

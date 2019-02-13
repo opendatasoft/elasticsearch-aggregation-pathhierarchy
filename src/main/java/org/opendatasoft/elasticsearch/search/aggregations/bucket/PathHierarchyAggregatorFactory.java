@@ -7,11 +7,11 @@ import org.apache.lucene.util.FutureArrays;
 import org.elasticsearch.index.fielddata.SortedBinaryDocValues;
 import org.elasticsearch.index.fielddata.SortingBinaryDocValues;
 import org.elasticsearch.search.aggregations.Aggregator;
+import org.elasticsearch.search.aggregations.BucketOrder;
+import org.elasticsearch.search.aggregations.InternalOrder;
 import org.elasticsearch.search.aggregations.AggregatorFactories;
 import org.elasticsearch.search.aggregations.AggregatorFactory;
-import org.elasticsearch.search.aggregations.BucketOrder;
 import org.elasticsearch.search.aggregations.InternalAggregation;
-import org.elasticsearch.search.aggregations.InternalOrder;
 import org.elasticsearch.search.aggregations.NonCollectingAggregator;
 import org.elasticsearch.search.aggregations.bucket.BucketUtils;
 import org.elasticsearch.search.aggregations.pipeline.PipelineAggregator;
@@ -35,6 +35,7 @@ class PathHierarchyAggregatorFactory extends ValuesSourceAggregatorFactory<Value
     private int minDepth;
     private int maxDepth;
     private BucketOrder order;
+    private long minDocCount;
     private boolean keepBlankPath;
     private final PathHierarchyAggregator.BucketCountThresholds bucketCountThresholds;
 
@@ -45,6 +46,7 @@ class PathHierarchyAggregatorFactory extends ValuesSourceAggregatorFactory<Value
                                    int maxDepth,
                                    boolean keepBlankPath,
                                    BucketOrder order,
+                                   long minDocCount,
                                    PathHierarchyAggregator.BucketCountThresholds bucketCountThresholds,
                                    SearchContext context,
                                    AggregatorFactory<?> parent,
@@ -57,6 +59,7 @@ class PathHierarchyAggregatorFactory extends ValuesSourceAggregatorFactory<Value
         this.maxDepth = maxDepth;
         this.keepBlankPath = keepBlankPath;
         this.order = order;
+        this.minDocCount = minDocCount;
         this.bucketCountThresholds = bucketCountThresholds;
     }
 
@@ -66,7 +69,7 @@ class PathHierarchyAggregatorFactory extends ValuesSourceAggregatorFactory<Value
             List<PipelineAggregator> pipelineAggregators,
             Map<String,
             Object> metaData) throws IOException {
-        final InternalAggregation aggregation = new InternalPathHierarchy(name, new ArrayList<>(), order,
+        final InternalAggregation aggregation = new InternalPathHierarchy(name, new ArrayList<>(), order, minDocCount,
                 bucketCountThresholds.getRequiredSize(), bucketCountThresholds.getShardSize(), 0, separator, pipelineAggregators, metaData);
         return new NonCollectingAggregator(name, context, parent, factories, pipelineAggregators, metaData) {
             {
@@ -100,7 +103,7 @@ class PathHierarchyAggregatorFactory extends ValuesSourceAggregatorFactory<Value
         bucketCountThresholds.ensureValidity();
         return new PathHierarchyAggregator(
                 name, factories, context,
-                valuesSourceBytes, order, bucketCountThresholds, separator,
+                valuesSourceBytes, order, minDocCount, bucketCountThresholds, separator,
                 parent, pipelineAggregators, metaData);
     }
 
