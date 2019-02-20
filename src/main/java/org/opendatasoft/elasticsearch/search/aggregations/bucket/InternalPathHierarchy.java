@@ -139,7 +139,6 @@ public class InternalPathHierarchy extends InternalMultiBucketAggregation<Intern
             builder.endObject();
             return builder;
         }
-
     }
 
 
@@ -283,52 +282,49 @@ public class InternalPathHierarchy extends InternalMultiBucketAggregation<Intern
                 sum_other_hierarchy_nodes, separator, pipelineAggregators(), getMetaData());
     }
 
-    private void doXContentInternal(XContentBuilder builder, Params params, InternalBucket currentBucket,
-                                    Iterator<InternalBucket> bucketIterator) throws IOException {
-        builder.startObject();
-        builder.field(CommonFields.KEY.getPreferredName(), currentBucket.basename);
-        builder.field(CommonFields.DOC_COUNT.getPreferredName(), currentBucket.getDocCount());
-        currentBucket.getAggregations().toXContentInternal(builder, params);
-
-        if (bucketIterator.hasNext()) {
-            InternalBucket nextBucket = bucketIterator.next();
-            if (nextBucket.level == currentBucket.level) {
-                builder.endObject();
-            } else if (nextBucket.level > currentBucket.level) {
-                builder.startObject(name);
-                builder.startArray(CommonFields.BUCKETS.getPreferredName());
-            } else {
-                builder.endObject();
-                for (int i=currentBucket.level; i > nextBucket.level; i--) {
-                    builder.endArray();
-                    builder.endObject();
-                    builder.endObject();
-                }
-            }
-            doXContentInternal(builder, params, nextBucket, bucketIterator);
-        } else {
-            if (currentBucket.level > 0) {
-                builder.endObject();
-                for (int i=currentBucket.level; i > 0; i--) {
-                    builder.endArray();
-                    builder.endObject();
-                    builder.endObject();
-                }
-            } else {
-                builder.endObject();
-            }
-        }
-    }
-
     @Override
     public XContentBuilder doXContentBody(XContentBuilder builder, Params params) throws IOException {
 //        builder.field(SUM_OF_OTHER_HIERARCHY_NODES.getPreferredName(), otherHierarchyNodes);
         Iterator<InternalBucket> bucketIterator = buckets.iterator();
         builder.startArray(CommonFields.BUCKETS.getPreferredName());
-        if (bucketIterator.hasNext()) {
-            InternalBucket firstBucket = bucketIterator.next();
-            doXContentInternal(builder, params, firstBucket, bucketIterator);
+        InternalBucket prevBucket = null;
+        InternalBucket currentBucket = null;
+        while (bucketIterator.hasNext()) {
+            currentBucket = bucketIterator.next();
+
+            if (prevBucket != null) {
+                if (prevBucket.level == currentBucket.level) {
+                    builder.endObject();
+                } else if (prevBucket.level < currentBucket.level) {
+                    builder.startObject(name);
+                    builder.startArray(CommonFields.BUCKETS.getPreferredName());
+                } else {
+                    for (int i = currentBucket.level; i < prevBucket.level; i++) {
+                        builder.endObject();
+                        builder.endArray();
+                        builder.endObject();
+                    }
+                    builder.endObject();
+                }
+            }
+
+            builder.startObject();
+            builder.field(CommonFields.KEY.getPreferredName(), currentBucket.basename);
+            builder.field(CommonFields.DOC_COUNT.getPreferredName(), currentBucket.docCount);
+            currentBucket.getAggregations().toXContentInternal(builder, params);
+
+            prevBucket = currentBucket;
         }
+
+        if (currentBucket != null) {
+            for (int i=0; i < currentBucket.level; i++) {
+                builder.endObject();
+                builder.endArray();
+                builder.endObject();
+            }
+            builder.endObject();
+        }
+
         builder.endArray();
         return builder;
     }
