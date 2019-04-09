@@ -87,6 +87,11 @@ public class PathHierarchyAggregationBuilder extends ValuesSourceAggregationBuil
         super(name, ValuesSourceType.ANY, valueType);
     }
 
+    @Override
+    protected boolean serializeTargetValueType() {
+        return true;
+    }
+
     /**
      * Read from a stream
      *
