@@ -13,6 +13,9 @@ Installation
 
 `bin/plugin --install path_hierarchy --url "https://github.com/opendatasoft/elasticsearch-aggregation-pathhierarchy/releases/download/v6.6.0.2/pathhierarchy-aggregation-6.6.0.2.zip"`
 
+Build
+-----------
+Requires Java 12
 
 Usage
 -----
