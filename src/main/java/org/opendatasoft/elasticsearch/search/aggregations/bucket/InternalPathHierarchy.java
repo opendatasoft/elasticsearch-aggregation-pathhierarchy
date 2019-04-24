@@ -17,6 +17,7 @@ import org.elasticsearch.search.aggregations.bucket.MultiBucketsAggregation;
 import org.elasticsearch.search.aggregations.pipeline.PipelineAggregator;
 
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -31,6 +32,7 @@ import java.util.TreeMap;
 public class InternalPathHierarchy extends InternalMultiBucketAggregation<InternalPathHierarchy,
         InternalPathHierarchy.InternalBucket> implements PathHierarchy {
     protected static final ParseField SUM_OF_OTHER_HIERARCHY_NODES = new ParseField("sum_other_hierarchy_nodes");
+    protected static final ParseField PATHS = new ParseField("path");
 
     /**
      * The bucket class of InternalPathHierarchy.
@@ -45,13 +47,16 @@ public class InternalPathHierarchy extends InternalMultiBucketAggregation<Intern
         protected long docCount;
         protected InternalAggregations aggregations;
         protected int level;
+        protected int minDepth;
         protected String basename;
 
-        public InternalBucket(long docCount, InternalAggregations aggregations, String basename, BytesRef term, int level, String[] paths) {
+        public InternalBucket(long docCount, InternalAggregations aggregations, String basename,
+                              BytesRef term, int level, int minDepth, String[] paths) {
             termBytes = term;
             this.docCount = docCount;
             this.aggregations = aggregations;
             this.level = level;
+            this.minDepth = minDepth;
             this.basename = basename;
             this.paths = paths;
         }
@@ -64,6 +69,7 @@ public class InternalPathHierarchy extends InternalMultiBucketAggregation<Intern
             docCount = in.readLong();
             aggregations = InternalAggregations.readAggregations(in);
             level = in.readInt();
+            minDepth = in.readInt();
             basename = in.readString();
             int pathsSize = in.readInt();
             paths = new String[pathsSize];
@@ -81,6 +87,7 @@ public class InternalPathHierarchy extends InternalMultiBucketAggregation<Intern
             out.writeLong(docCount);
             aggregations.writeTo(out);
             out.writeInt(level);
+            out.writeInt(minDepth);
             out.writeString(basename);
             out.writeInt(paths.length);
             for (String path: paths) {
@@ -229,7 +236,7 @@ public class InternalPathHierarchy extends InternalMultiBucketAggregation<Intern
     @Override
     public InternalBucket createBucket(InternalAggregations aggregations, InternalBucket prototype) {
         return new InternalBucket(prototype.docCount, aggregations, prototype.basename, prototype.termBytes,
-                prototype.level, prototype.paths);
+                prototype.level, prototype.minDepth, prototype.paths);
     }
 
     @Override
@@ -271,7 +278,13 @@ public class InternalPathHierarchy extends InternalMultiBucketAggregation<Intern
             final InternalBucket b = sameTermBuckets.get(0).reduce(sameTermBuckets, reduceContext);
             if (b.getDocCount() >= minDocCount || !reduceContext.isFinalReduce()) {
                 reduceContext.consumeBucketsAndMaybeBreak(1);
-                ordered.add(b.paths, b);
+                String [] pathsForTree;
+                if (b.minDepth > 0) {
+                    pathsForTree = Arrays.copyOfRange(b.paths, b.minDepth, b.paths.length);
+                } else {
+                    pathsForTree = b.paths;
+                }
+                ordered.add(pathsForTree, b);
             } else {
                 reduceContext.consumeBucketsAndMaybeBreak(-countInnerBucket(b));
             }
@@ -311,6 +324,7 @@ public class InternalPathHierarchy extends InternalMultiBucketAggregation<Intern
             builder.startObject();
             builder.field(CommonFields.KEY.getPreferredName(), currentBucket.basename);
             builder.field(CommonFields.DOC_COUNT.getPreferredName(), currentBucket.docCount);
+            builder.field(PATHS.getPreferredName(), Arrays.copyOf(currentBucket.paths, currentBucket.paths.length -1));
             currentBucket.getAggregations().toXContentInternal(builder, params);
 
             prevBucket = currentBucket;
@@ -331,7 +345,7 @@ public class InternalPathHierarchy extends InternalMultiBucketAggregation<Intern
 
     @Override
     protected int doHashCode() {
-        return Objects.hash(buckets, separator, order, requiredSize, shardSize, otherHierarchyNodes);
+        return Objects.hash(buckets, separator, order, requiredSize, shardSize, otherHierarchyNodes, minDocCount);
     }
 
     @Override
@@ -340,6 +354,7 @@ public class InternalPathHierarchy extends InternalMultiBucketAggregation<Intern
         return Objects.equals(buckets, that.buckets)
                 && Objects.equals(separator, that.separator)
                 && Objects.equals(order, that.order)
+                && Objects.equals(minDocCount, that.minDocCount)
                 && Objects.equals(requiredSize, that.requiredSize)
                 && Objects.equals(shardSize, that.shardSize)
                 && Objects.equals(otherHierarchyNodes, that.otherHierarchyNodes);

@@ -25,6 +25,7 @@ import org.elasticsearch.search.internal.SearchContext;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -120,6 +121,7 @@ public class PathHierarchyAggregator extends BucketsAggregator {
     private final BytesRefHash bucketOrds;
     private final BucketOrder order;
     private final long minDocCount;
+    private final int minDepth;
     private final BucketCountThresholds bucketCountThresholds;
     private final BytesRef separator;
 
@@ -132,6 +134,7 @@ public class PathHierarchyAggregator extends BucketsAggregator {
             long minDocCount,
             BucketCountThresholds bucketCountThresholds,
             BytesRef separator,
+            int minDepth,
             Aggregator parent,
             List<PipelineAggregator> pipelineAggregators,
             Map<String, Object> metaData
@@ -143,6 +146,7 @@ public class PathHierarchyAggregator extends BucketsAggregator {
         bucketOrds = new BytesRefHash(1, context.bigArrays());
         this.order = InternalOrder.validate(order, this);
         this.bucketCountThresholds = bucketCountThresholds;
+        this.minDepth = minDepth;
     }
 
     /**
@@ -173,7 +177,7 @@ public class PathHierarchyAggregator extends BucketsAggregator {
                     // SortedBinaryDocValues don't guarantee uniqueness so we need to take care of dups
                     for (int i = 0; i < valuesCount; ++i) {
                         final BytesRef bytesValue = values.nextValue();
-                        if (previous.get().equals(bytesValue)) {
+                        if (i > 0 && previous.get().equals(bytesValue)) {
                             continue;
                         }
                         long bucketOrdinal = bucketOrds.add(bytesValue);
@@ -201,21 +205,32 @@ public class PathHierarchyAggregator extends BucketsAggregator {
 
         InternalPathHierarchy.InternalBucket spare = null;
         for (int i = 0; i < bucketOrds.size(); i++) {
-            spare = new InternalPathHierarchy.InternalBucket(0, null, null, new BytesRef(), 0, null);
+            spare = new InternalPathHierarchy.InternalBucket(0, null, null, new BytesRef(), 0, 0, null);
             BytesRef term = new BytesRef();
             bucketOrds.get(i, term);
 
-            String [] paths = term.utf8ToString().split(Pattern.quote(separator.utf8ToString()), -1);
+            String quotedPattern = Pattern.quote(separator.utf8ToString());
+
+            String [] paths = term.utf8ToString().split(quotedPattern, -1);
+
+            String [] pathsForTree;
+
+            if (minDepth > 0) {
+                pathsForTree = Arrays.copyOfRange(paths, minDepth, paths.length);
+            } else {
+                pathsForTree = paths;
+            }
 
             spare.termBytes = BytesRef.deepCopyOf(term);
             spare.aggregations = bucketAggregations(i);
-            spare.level = paths.length - 1;
+            spare.level = pathsForTree.length - 1;
             spare.docCount = bucketDocCount(i);
             spare.basename = paths[paths.length - 1];
+            spare.minDepth = minDepth;
             spare.bucketOrd = i;
             spare.paths = paths;
 
-            pathSortedTree.add(paths, spare);
+            pathSortedTree.add(pathsForTree, spare);
 
             consumeBucketsAndMaybeBreak(1);
         }

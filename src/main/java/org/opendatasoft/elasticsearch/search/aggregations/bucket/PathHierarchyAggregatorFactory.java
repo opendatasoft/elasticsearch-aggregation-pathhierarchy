@@ -1,6 +1,7 @@
 package org.opendatasoft.elasticsearch.search.aggregations.bucket;
 
 import org.apache.lucene.index.LeafReaderContext;
+import org.apache.lucene.util.ArrayUtil;
 import org.apache.lucene.util.BytesRef;
 import org.apache.lucene.util.BytesRefBuilder;
 import org.apache.lucene.util.FutureArrays;
@@ -102,7 +103,7 @@ class PathHierarchyAggregatorFactory extends ValuesSourceAggregatorFactory<Value
         bucketCountThresholds.ensureValidity();
         return new PathHierarchyAggregator(
                 name, factories, context,
-                valuesSourceBytes, order, minDocCount, bucketCountThresholds, separator,
+                valuesSourceBytes, order, minDocCount, bucketCountThresholds, separator, minDepth,
                 parent, pipelineAggregators, metaData);
     }
 
@@ -162,17 +163,17 @@ class PathHierarchyAggregatorFactory extends ValuesSourceAggregatorFactory<Value
 
                             // A new path needs to be add
                             if (startNewValOffset != -1) {
+                                cleanVal.append(val.bytes, val.offset + startNewValOffset, offset - startNewValOffset);
                                 if (depth >= minDepth) {
-                                    cleanVal.append(val.bytes, val.offset + startNewValOffset, offset - startNewValOffset);
                                     values[t++].copyBytes(cleanVal);
-                                    cleanVal.append(separator);
                                 }
                                 startNewValOffset = -1;
+                                cleanVal.append(separator);
                                 depth ++;
                             // two separators following each other
                             } else if (keepBlankPath) {
                                 count++;
-                                grow();
+                                growExact();
                                 values[t++].copyBytes(cleanVal);
                                 cleanVal.append(separator);
                                 depth ++;
@@ -185,8 +186,10 @@ class PathHierarchyAggregatorFactory extends ValuesSourceAggregatorFactory<Value
                         } else {
                             if (startNewValOffset == -1) {
                                 startNewValOffset = offset;
-                                count++;
-                                grow();
+                                if (depth >= minDepth) {
+                                    count++;
+                                    growExact();
+                                }
                             }
                         }
                     }
@@ -202,8 +205,17 @@ class PathHierarchyAggregatorFactory extends ValuesSourceAggregatorFactory<Value
             } else
                 return false;
         }
-    }
 
+        final void growExact() {
+            if (values.length < count) {
+                final int oldLen = values.length;
+                values = ArrayUtil.growExact(values, count);
+                for (int i = oldLen; i < count; ++i) {
+                    values[i] = new BytesRefBuilder();
+                }
+            }
+        }
+    }
 
     /**
      * To get ValuesSource as sorted bytes.
