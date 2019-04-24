@@ -1,43 +1,45 @@
 setup:
-- do:
-    indices.create:
-      index: filesystem
-      body:
-        mappings:
-          file:
+  - do:
+      indices.create:
+        index: filesystem
+        body:
+          settings:
+            number_of_shards: 1
+            number_of_replicas: 0
+          mappings:
             properties:
               path:
                 type: keyword
-                index: false
-                doc_values: true
+              views:
+                type: integer
+
+  - do:
+      cluster.health:
+        wait_for_status: green
 
 ---
 "Test with filesystem arborescence":
   - do:
       index:
         index: filesystem
-        type: file
         id: 1
         body: { "path": "/My documents/Spreadsheets/Budget_2013.xls", "views": 10 }
 
   - do:
       index:
         index: filesystem
-        type: file
         id: 2
         body: { "path": "/My documents/Spreadsheets/Budget_2014.xls", "views": 7 }
 
   - do:
       index:
         index: filesystem
-        type: file
         id: 3
         body: { "path": "/My documents/Test.txt", "views": 1 }
 
   - do:
       index:
         index: filesystem
-        type: file
         id: 4
         body: { "path": "/My documents/Spreadsheets//Budget_2014.xls", "views": 12 }
 
@@ -48,6 +50,7 @@ setup:
 # basic test
   - do:
       search:
+        rest_total_hits_as_int: true
         body: {
           "size" : 0,
           "aggs" : {
@@ -96,6 +99,7 @@ setup:
 # test size
   - do:
       search:
+        rest_total_hits_as_int: true
         body: {
           "size" : 0,
           "aggs" : {
@@ -120,6 +124,7 @@ setup:
 # test depth
   - do:
       search:
+        rest_total_hits_as_int: true
         body: {
           "size" : 0,
           "aggs" : {
@@ -127,7 +132,7 @@ setup:
               "path_hierarchy" : {
                 "field" : "path",
                 "separator": "/",
-                "order": [ {"_count": "desc"}, {"_key": "asc"}],
+                "order": [{"_count": "desc"}, {"_key": "asc"}],
                 "depth": 2
               },
               "aggs": {
@@ -155,6 +160,7 @@ setup:
 # test keep_blank_path
   - do:
       search:
+        rest_total_hits_as_int: true
         body: {
           "size" : 0,
           "aggs" : {
@@ -162,7 +168,7 @@ setup:
               "path_hierarchy" : {
                 "field" : "path",
                 "separator": "/",
-                "order": [ {"_count": "desc"}, {"_key": "asc"}],
+                "order": [{"_count": "desc"}, {"_key": "asc"}],
                 "keep_blank_path": "true"
               },
               "aggs": {
@@ -209,6 +215,7 @@ setup:
 # test multi characters separator
   - do:
       search:
+        rest_total_hits_as_int: true
         body: {
           "size" : 0,
           "aggs" : {
