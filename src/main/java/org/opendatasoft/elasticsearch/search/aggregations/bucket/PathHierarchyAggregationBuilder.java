@@ -302,7 +302,7 @@ public class PathHierarchyAggregationBuilder extends ValuesSourceAggregationBuil
      */
     @Override
     protected int innerHashCode() {
-        return Objects.hash(separator, minDepth, maxDepth, depth, order);
+        return Objects.hash(separator, minDepth, maxDepth, depth, order, minDocCount, bucketCountThresholds);
     }
 
     @Override
