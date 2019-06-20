@@ -7,6 +7,7 @@ import org.elasticsearch.ElasticsearchException;
 import org.elasticsearch.common.io.stream.StreamInput;
 import org.elasticsearch.common.io.stream.StreamOutput;
 import org.elasticsearch.common.io.stream.Writeable;
+import org.elasticsearch.common.lease.Releasables;
 import org.elasticsearch.common.util.BytesRefHash;
 import org.elasticsearch.common.xcontent.ToXContentFragment;
 import org.elasticsearch.common.xcontent.XContentBuilder;
@@ -255,4 +256,8 @@ public class PathHierarchyAggregator extends BucketsAggregator {
                 bucketCountThresholds.getShardSize(), 0, separator, pipelineAggregators(), metaData());
     }
 
+    @Override
+    protected void doClose() {
+        Releasables.close(bucketOrds);
+    }
 }
