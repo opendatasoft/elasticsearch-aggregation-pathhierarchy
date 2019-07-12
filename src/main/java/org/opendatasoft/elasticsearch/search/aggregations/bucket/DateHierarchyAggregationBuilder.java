@@ -1,15 +1,15 @@
 package org.opendatasoft.elasticsearch.search.aggregations.bucket;
 
 import org.elasticsearch.common.ParseField;
-import org.elasticsearch.common.Rounding;
 import org.elasticsearch.common.io.stream.StreamInput;
 import org.elasticsearch.common.io.stream.StreamOutput;
 import org.elasticsearch.common.io.stream.Writeable;
+import org.elasticsearch.common.rounding.DateTimeUnit;
+import org.elasticsearch.common.rounding.Rounding;
 import org.elasticsearch.common.time.DateFormatter;
 import org.elasticsearch.common.xcontent.ObjectParser;
 import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.common.xcontent.XContentParser;
-import org.elasticsearch.index.mapper.DateFieldMapper;
 import org.elasticsearch.search.DocValueFormat;
 import org.elasticsearch.search.aggregations.AggregationBuilder;
 import org.elasticsearch.search.aggregations.AggregatorFactories.Builder;
@@ -25,10 +25,9 @@ import org.elasticsearch.search.aggregations.support.ValuesSourceAggregationBuil
 import org.elasticsearch.search.aggregations.support.ValuesSourceAggregatorFactory;
 import org.elasticsearch.search.aggregations.support.ValuesSourceParserHelper;
 import org.elasticsearch.search.internal.SearchContext;
+import org.joda.time.DateTimeZone;
 
 import java.io.IOException;
-import java.time.ZoneId;
-import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -56,20 +55,20 @@ public class DateHierarchyAggregationBuilder extends ValuesSourceAggregationBuil
     public static final Map<String, IntervalConfig> INTERVAL_CONFIG;
     static {
         Map<String, IntervalConfig> dateFieldUnits = new LinkedHashMap<>();
-        dateFieldUnits.put("years", new IntervalConfig(Rounding.DateTimeUnit.YEAR_OF_CENTURY, "yyyy"));
-        dateFieldUnits.put("months", new IntervalConfig(Rounding.DateTimeUnit.MONTH_OF_YEAR, "MM"));
-        dateFieldUnits.put("days", new IntervalConfig(Rounding.DateTimeUnit.DAY_OF_MONTH, "dd"));
-        dateFieldUnits.put("hours", new IntervalConfig(Rounding.DateTimeUnit.HOUR_OF_DAY, "hh"));
-        dateFieldUnits.put("minutes", new IntervalConfig(Rounding.DateTimeUnit.MINUTES_OF_HOUR, "mm"));
-        dateFieldUnits.put("seconds", new IntervalConfig(Rounding.DateTimeUnit.SECOND_OF_MINUTE, "ss"));
+        dateFieldUnits.put("years", new IntervalConfig(DateTimeUnit.YEAR_OF_CENTURY, "yyyy"));
+        dateFieldUnits.put("months", new IntervalConfig(DateTimeUnit.MONTH_OF_YEAR, "MM"));
+        dateFieldUnits.put("days", new IntervalConfig(DateTimeUnit.DAY_OF_MONTH, "dd"));
+        dateFieldUnits.put("hours", new IntervalConfig(DateTimeUnit.HOUR_OF_DAY, "hh"));
+        dateFieldUnits.put("minutes", new IntervalConfig(DateTimeUnit.MINUTES_OF_HOUR, "mm"));
+        dateFieldUnits.put("seconds", new IntervalConfig(DateTimeUnit.SECOND_OF_MINUTE, "ss"));
         INTERVAL_CONFIG = unmodifiableMap(dateFieldUnits);
     }
 
     public static class IntervalConfig {
-        final Rounding.DateTimeUnit dateTimeUnit;
+        final DateTimeUnit dateTimeUnit;
         final String format;
 
-        public IntervalConfig(Rounding.DateTimeUnit dateTimeUnit, String format) {
+        public IntervalConfig(DateTimeUnit dateTimeUnit, String format) {
             this.dateTimeUnit = dateTimeUnit;
             this.format = format;
         }
@@ -78,12 +77,11 @@ public class DateHierarchyAggregationBuilder extends ValuesSourceAggregationBuil
     public List<RoundingInfo> buildRoundings() {
         List<RoundingInfo> roundings = new ArrayList<>();
 
-        ZoneId timeZone = timeZone() == null ? ZoneOffset.UTC: timeZone();
+        DateTimeZone timeZone = timeZone() == null ? DateTimeZone.UTC: timeZone();
 
         for (String interval: INTERVAL_CONFIG.keySet()) {
             roundings.add(new RoundingInfo(interval, createRounding(INTERVAL_CONFIG.get(interval).dateTimeUnit),
-                    new DocValueFormat.DateTime(DateFormatter.forPattern(INTERVAL_CONFIG.get(interval).format), timeZone,
-                            DateFieldMapper.Resolution.MILLISECONDS)));
+                    new DocValueFormat.DateTime(DateFormatter.forPattern(INTERVAL_CONFIG.get(interval).format), timeZone)));
             if (interval.equals(interval())) {
                 break;
             }
@@ -104,7 +102,7 @@ public class DateHierarchyAggregationBuilder extends ValuesSourceAggregationBuil
         }
 
         public RoundingInfo(StreamInput in) throws IOException {
-            rounding = Rounding.read(in);
+            rounding = Rounding.Streams.read(in);
             interval = in.readString();
             format = in.readNamedWriteable(DocValueFormat.class);
         }
@@ -129,9 +127,9 @@ public class DateHierarchyAggregationBuilder extends ValuesSourceAggregationBuil
 
         PARSER.declareField(DateHierarchyAggregationBuilder::timeZone, p -> {
             if (p.currentToken() == XContentParser.Token.VALUE_STRING) {
-                return ZoneId.of(p.text());
+                return DateTimeZone.forID(p.text());
             } else {
-                return ZoneOffset.ofHours(p.intValue());
+                return DateTimeZone.forOffsetHours(p.intValue());
             }
         }, new ParseField("time_zone"), ObjectParser.ValueType.LONG);
 
@@ -147,7 +145,7 @@ public class DateHierarchyAggregationBuilder extends ValuesSourceAggregationBuil
     }
 
     private long minDocCount = 0;
-    private ZoneId timeZone = null;
+    private DateTimeZone timeZone = null;
     private String interval = "years";
     private BucketOrder order = BucketOrder.compound(BucketOrder.count(false)); // automatically adds tie-breaker key asc order
     private DateHierarchyAggregator.BucketCountThresholds bucketCountThresholds = new DateHierarchyAggregator.BucketCountThresholds(
@@ -219,7 +217,7 @@ public class DateHierarchyAggregationBuilder extends ValuesSourceAggregationBuil
     /**
      * Sets the time zone to use for this aggregation
      */
-    public DateHierarchyAggregationBuilder timeZone(ZoneId timeZone) {
+    public DateHierarchyAggregationBuilder timeZone(DateTimeZone timeZone) {
         if (timeZone == null) {
             throw new IllegalArgumentException("[timeZone] must not be null: [" + name + "]");
         }
@@ -230,11 +228,11 @@ public class DateHierarchyAggregationBuilder extends ValuesSourceAggregationBuil
     /**
      * Gets the time zone to use for this aggregation
      */
-    public ZoneId timeZone() {
+    public DateTimeZone timeZone() {
         return timeZone;
     }
 
-    private Rounding createRounding(Rounding.DateTimeUnit dateTimeUnit) {
+    private Rounding createRounding(DateTimeUnit dateTimeUnit) {
         Rounding.Builder tzRoundingBuilder;
         tzRoundingBuilder = Rounding.builder(dateTimeUnit);
 
