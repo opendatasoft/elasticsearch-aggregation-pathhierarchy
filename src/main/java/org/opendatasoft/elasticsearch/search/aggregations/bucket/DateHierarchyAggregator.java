@@ -2,12 +2,13 @@ package org.opendatasoft.elasticsearch.search.aggregations.bucket;
 
 import org.apache.lucene.index.LeafReaderContext;
 import org.apache.lucene.index.SortedNumericDocValues;
+import org.apache.lucene.util.BytesRef;
 import org.elasticsearch.ElasticsearchException;
 import org.elasticsearch.common.io.stream.StreamInput;
 import org.elasticsearch.common.io.stream.StreamOutput;
 import org.elasticsearch.common.io.stream.Writeable;
 import org.elasticsearch.common.lease.Releasables;
-import org.elasticsearch.common.util.LongHash;
+import org.elasticsearch.common.util.BytesRefHash;
 import org.elasticsearch.common.xcontent.ToXContentFragment;
 import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.search.aggregations.Aggregator;
@@ -115,7 +116,7 @@ public class DateHierarchyAggregator extends BucketsAggregator {
     }
 
     private final ValuesSource.Numeric valuesSource;
-    private final LongHash bucketOrds;
+    private final BytesRefHash bucketOrds;
     private final BucketOrder order;
     private final long minDocCount;
     private final BucketCountThresholds bucketCountThresholds;
@@ -138,7 +139,7 @@ public class DateHierarchyAggregator extends BucketsAggregator {
         this.valuesSource = valuesSource;
         this.roundingsInfo = roundingsInfo;
         this.minDocCount = minDocCount;
-        bucketOrds =  new LongHash(1, aggregationContext.bigArrays());
+        bucketOrds =  new BytesRefHash(1, context.bigArrays());
         this.order = InternalOrder.validate(order, this);
         this.bucketCountThresholds = bucketCountThresholds;
     }
@@ -165,22 +166,20 @@ public class DateHierarchyAggregator extends BucketsAggregator {
 
                     for (int i = 0; i < valuesCount; ++i) {
                         long value = values.nextValue();
-                        long previousRounded = Long.MIN_VALUE;
+                        String path = "";
                         for (DateHierarchyAggregationBuilder.RoundingInfo roundingInfo: roundingsInfo) {
-                            long roundedValue = roundingInfo.rounding.round(value);
                             // A little hacky: Add a microsecond to avoid collision between min dates interval
                             // Since interval cannot be set to microsecond, it is not a problem
-                            if (roundedValue == previousRounded) {
-                                roundedValue += 1;
-                            }
-                            previousRounded = roundedValue;
-                            long bucketOrd = bucketOrds.add(roundedValue);
+                            long roundedValue = roundingInfo.rounding.round(value);
+                            path += roundingInfo.format.format(roundedValue).toString();
+                            long bucketOrd = bucketOrds.add(new BytesRef(path));
                             if (bucketOrd < 0) { // already seen
                                 bucketOrd = -1 - bucketOrd;
                                 collectExistingBucket(sub, doc, bucketOrd);
                             } else {
                                 collectBucket(sub, doc, bucketOrd);
                             }
+                            path += "/";
                         }
                     }
                 }
@@ -195,41 +194,27 @@ public class DateHierarchyAggregator extends BucketsAggregator {
         // build buckets and store them sorted
         final int size = (int) Math.min(bucketOrds.size(), bucketCountThresholds.getShardSize());
 
-        PathSortedTree<Long, InternalDateHierarchy.InternalBucket> pathSortedTree = new PathSortedTree<>(order.comparator(this), size);
+        PathSortedTree<String, InternalDateHierarchy.InternalBucket> pathSortedTree = new PathSortedTree<>(order.comparator(this), size);
 
         InternalDateHierarchy.InternalBucket spare = null;
         for (int i = 0; i < bucketOrds.size(); i++) {
-            spare = new InternalDateHierarchy.InternalBucket(0, null, 0, 0, null, null);
+            spare = new InternalDateHierarchy.InternalBucket(0, null, null, null, 0, null);
 
-            List<Long> paths = new ArrayList<>();
+            BytesRef term = new BytesRef();
+            bucketOrds.get(i, term);
+            String [] paths = term.utf8ToString().split("/", -1);
 
-            long value = bucketOrds.get(i);
-            // FIXME: find a clever and most optimized way to not recompute rounding here
-            long previousRounded = Long.MIN_VALUE;
-            for (DateHierarchyAggregationBuilder.RoundingInfo roundingInfo: roundingsInfo) {
-                long roundedValue = roundingInfo.rounding.round(value);
-                if (roundedValue == previousRounded) {
-                    roundedValue += 1;
-                }
-                previousRounded = roundedValue;
-                if (roundedValue == value) {
-                    break;
-                }
-                paths.add(roundedValue);
-            }
-
-            paths.add(value);
-
-            spare.key = value;
+            spare.paths = paths;
+            spare.key = term;
+            spare.level = paths.length - 1;
+            spare.name = paths[spare.level];
             spare.aggregations = bucketAggregations(i);
             spare.docCount = bucketDocCount(i);
-            spare.level = paths.size() - 1;
-            spare.paths = paths.toArray(new Long[0]);
-            spare.format = roundingsInfo.get(spare.level).format;
 
             pathSortedTree.add(spare.paths, spare);
 
             consumeBucketsAndMaybeBreak(1);
+
         }
 
         // Get the top buckets

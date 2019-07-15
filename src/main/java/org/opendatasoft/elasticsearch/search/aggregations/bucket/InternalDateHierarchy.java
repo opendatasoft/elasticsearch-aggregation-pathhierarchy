@@ -1,9 +1,9 @@
 package org.opendatasoft.elasticsearch.search.aggregations.bucket;
 
+import org.apache.lucene.util.BytesRef;
 import org.elasticsearch.common.io.stream.StreamInput;
 import org.elasticsearch.common.io.stream.StreamOutput;
 import org.elasticsearch.common.xcontent.XContentBuilder;
-import org.elasticsearch.search.DocValueFormat;
 import org.elasticsearch.search.aggregations.Aggregations;
 import org.elasticsearch.search.aggregations.BucketOrder;
 import org.elasticsearch.search.aggregations.InternalAggregation;
@@ -38,35 +38,35 @@ public class InternalDateHierarchy extends InternalMultiBucketAggregation<Intern
     public static class InternalBucket extends InternalMultiBucketAggregation.InternalBucket implements
             MultiBucketsAggregation.Bucket, KeyComparable<InternalBucket> {
 
-        long key;
-        protected Long[] paths;
+        BytesRef key;
+        String name;
+        protected String[] paths;
         protected long docCount;
         protected InternalAggregations aggregations;
         protected int level;
-        protected DocValueFormat format;
 
-        public InternalBucket(long docCount, InternalAggregations aggregations, long key, int level, Long[] paths, DocValueFormat format) {
+        public InternalBucket(long docCount, InternalAggregations aggregations, BytesRef key, String name, int level, String[] paths) {
             this.key = key;
+            this.name = name;
             this.docCount = docCount;
             this.aggregations = aggregations;
             this.level = level;
             this.paths = paths;
-            this.format = format;
         }
 
         /**
          * Read from a stream.
          */
         public InternalBucket(StreamInput in) throws IOException {
-            key = in.readLong();
+            key = in.readBytesRef();
+            name = in.readString();
             docCount = in.readLong();
             aggregations = InternalAggregations.readAggregations(in);
             level = in.readInt();
-            format = in.readNamedWriteable(DocValueFormat.class);
             int pathsSize = in.readInt();
-            paths = new Long[pathsSize];
+            paths = new String[pathsSize];
             for (int i=0; i < pathsSize; i++) {
-                paths[i] = in.readLong();
+                paths[i] = in.readString();
             }
         }
 
@@ -75,14 +75,14 @@ public class InternalDateHierarchy extends InternalMultiBucketAggregation<Intern
          */
         @Override
         public void writeTo(StreamOutput out) throws IOException {
-            out.writeLong(key);
+            out.writeBytesRef(key);
+            out.writeString(name);
             out.writeLong(docCount);
             aggregations.writeTo(out);
             out.writeInt(level);
-            out.writeNamedWriteable(format);
             out.writeInt(paths.length);
-            for (Long path: paths) {
-                out.writeLong(path);
+            for (String path: paths) {
+                out.writeString(path);
             }
         }
 
@@ -93,12 +93,12 @@ public class InternalDateHierarchy extends InternalMultiBucketAggregation<Intern
 
         @Override
         public String getKeyAsString() {
-            return format.format(key).toString();
+            return key.utf8ToString();
         }
 
         @Override
         public int compareKey(InternalBucket other) {
-            return Long.compare(key, other.key);
+            return key.compareTo(other.key);
         }
 
         @Override
@@ -222,7 +222,7 @@ public class InternalDateHierarchy extends InternalMultiBucketAggregation<Intern
 
     @Override
     public InternalBucket createBucket(InternalAggregations aggregations, InternalBucket prototype) {
-        return new InternalBucket(prototype.docCount, aggregations, prototype.key, prototype.level, prototype.paths, prototype.format);
+        return new InternalBucket(prototype.docCount, aggregations, prototype.key, prototype.name, prototype.level, prototype.paths);
     }
 
     @Override
@@ -235,7 +235,7 @@ public class InternalDateHierarchy extends InternalMultiBucketAggregation<Intern
      */
     @Override
     public InternalDateHierarchy doReduce(List<InternalAggregation> aggregations, ReduceContext reduceContext) {
-        Map<Long, List<InternalBucket>> buckets = null;
+        Map<BytesRef, List<InternalBucket>> buckets = null;
         long otherHierarchyNodes = 0;
 
         // extract buckets from aggregations
@@ -259,7 +259,7 @@ public class InternalDateHierarchy extends InternalMultiBucketAggregation<Intern
 
         // reduce and sort buckets depending of ordering rules
         final int size = !reduceContext.isFinalReduce() ? buckets.size() : Math.min(requiredSize, buckets.size());
-        PathSortedTree<Long, InternalBucket> ordered = new PathSortedTree<>(order.comparator(null), size);
+        PathSortedTree<String, InternalBucket> ordered = new PathSortedTree<>(order.comparator(null), size);
         for (List<InternalBucket> sameTermBuckets : buckets.values()) {
 
             final InternalBucket b = sameTermBuckets.get(0).reduce(sameTermBuckets, reduceContext);
@@ -302,7 +302,7 @@ public class InternalDateHierarchy extends InternalMultiBucketAggregation<Intern
             }
 
             builder.startObject();
-            builder.field(CommonFields.KEY.getPreferredName(), currentBucket.getKeyAsString());
+            builder.field(CommonFields.KEY.getPreferredName(), currentBucket.name);
             builder.field(CommonFields.DOC_COUNT.getPreferredName(), currentBucket.docCount);
             currentBucket.getAggregations().toXContentInternal(builder, params);
 
