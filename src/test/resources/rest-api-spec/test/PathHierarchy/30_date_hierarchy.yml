@@ -1,0 +1,100 @@
+setup:
+  - do:
+      indices.create:
+        index: calendar
+        body:
+          settings:
+            number_of_shards: 2
+            number_of_replicas: 0
+          mappings:
+            properties:
+              date:
+                type: date
+
+  - do:
+      cluster.health:
+        wait_for_status: green
+
+---
+"Test with date hierarchy":
+  - do:
+      index:
+        index: calendar
+        id: 1
+        body: { "date": "2012-01-10T02:47:28" }
+
+  - do:
+      index:
+        index: calendar
+        id: 2
+        body: { "date": "2011-01-05T01:43:35" }
+
+  - do:
+      index:
+        index: calendar
+        id: 3
+        body: { "date": "2012-05-01T12:24:19" }
+
+  - do:
+      indices.refresh: {}
+
+
+# test years interval
+  - do:
+      search:
+        rest_total_hits_as_int: true
+        body: {
+          "size" : 0,
+          "aggs" : {
+            "tree" : {
+              "date_hierarchy" : {
+                "field" : "date",
+                "interval": "years",
+                "order": [{"_key": "asc"}],
+              }
+            }
+          }
+        }
+
+  - match: { hits.total: 3 }
+
+  - match: { aggregations.tree.buckets.0.key: "2011" }
+  - match: { aggregations.tree.buckets.0.doc_count: 1 }
+
+  - match: { aggregations.tree.buckets.1.key: "2012" }
+  - match: { aggregations.tree.buckets.1.doc_count: 2 }
+
+
+# test months interval
+  - do:
+      search:
+        rest_total_hits_as_int: true
+        body: {
+          "size": 0,
+          "aggs": {
+            "tree": {
+              "date_hierarchy": {
+                "field": "date",
+                "interval": "months",
+                "order": [{"_key": "asc"}],
+              }
+            }
+          }
+        }
+
+  - match: { hits.total: 3 }
+
+  - match: { aggregations.tree.buckets.0.key: "2011" }
+  - match: { aggregations.tree.buckets.0.doc_count: 1 }
+
+  - match: { aggregations.tree.buckets.1.key: "2012" }
+  - match: { aggregations.tree.buckets.1.doc_count: 2 }
+
+  - match: { aggregations.tree.buckets.0.tree.buckets.0.key: "01" }
+  - match: { aggregations.tree.buckets.0.tree.buckets.0.doc_count: 1 }
+
+  - match: { aggregations.tree.buckets.1.tree.buckets.0.key: "01" }
+  - match: { aggregations.tree.buckets.1.tree.buckets.0.doc_count: 1 }
+
+  - match: { aggregations.tree.buckets.1.tree.buckets.1.key: "05" }
+  - match: { aggregations.tree.buckets.1.tree.buckets.1.doc_count: 1 }
