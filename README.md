@@ -1,9 +1,13 @@
 Elasticsearch Aggregation Path Hierarchy Plugin
 =========================================
 
-This plugins adds the possibility to create hierarchical aggregations.
+This plugin adds the possibility to create hierarchical aggregations.
 Each term is split on a provided separator (default "/") then aggregated by level.
 For a complete example see https://github.com/elastic/elasticsearch/issues/8896
+
+Two different aggregations are available:
+ - `path_hierarchy` for hierarchical aggregations on `keywords` field or `scripts`
+ - `date_hierarchy` for hierachical aggregations on `date` fields. It is more optimized to use this aggregation for date instead of a script.
 
 This is a multi bucket aggregation.
 
@@ -14,11 +18,11 @@ Installation
 `bin/plugin --install path_hierarchy --url "https://github.com/opendatasoft/elasticsearch-aggregation-pathhierarchy/releases/download/v6.6.0.2/pathhierarchy-aggregation-6.6.0.2.zip"`
 
 Build
------------
+-----
 Requires Java 12
 
-Usage
------
+Path hierarchy aggregation
+--------------------------
 
 ### Parameters
 
@@ -40,44 +44,41 @@ Examples
 #### String field
 
 ```
-Add data:
+# Add data:
 
-PUT /filesystem
+PUT filesystem
 {
   "mappings": {
-    "file": {
-      "properties": {
-        "path": {
-          "type": "keyword"
-        }
+    "properties": {
+      "path": {
+        "type": "keyword"
       }
     }
   }
 }
 
-PUT /filesystem/file/1
+PUT /filesystem/_doc/1
 {
   "path": "/My documents/Spreadsheets/Budget_2013.xls",
   "views": 10
 }
 
-PUT /filesystem/file/2
+PUT /filesystem/_doc/2
 {
   "path": "/My documents/Spreadsheets/Budget_2014.xls",
   "views": 7
 }
 
-PUT /filesystem/file/3
+PUT /filesystem/_doc/3
 {
   "path": "/My documents/Test.txt",
   "views": 1
 }
 
 
+# Path hierarchy request :
 
-Path hierarchy request :
-
-GET /filesystem/file/_search?size=0
+GET /filesystem/_search?size=0
 {
   "aggs": {
     "tree": {
@@ -159,38 +160,36 @@ Result :
 PUT calendar
 {
   "mappings": {
-    "date": {
-      "properties": {
-        "date": {
-          "type": "date",
-          "index": false,
-          "doc_values": true
-        }
+    "properties": {
+      "date": {
+        "type": "date"
       }
     }
   }
 }
 
-PUT /calendar/date/1
+PUT /calendar/_doc/1
 {
   "date": "2012-01-10T02:47:28"
 }
-PUT /calendar/date/2
+PUT /calendar/_doc/2
 {
   "date": "2012-01-05T01:43:35"
 }
-PUT /calendar/date/3
+PUT /calendar/_doc/3
 {
   "date": "2012-05-01T12:24:19"
 }
 
-GET /calendar/date/_search?size=0
+GET /calendar/_search?size=0
 {
   "aggs": {
     "tree": {
       "path_hierarchy": {
-        "script": "doc['date'].value.toString('YYYY/MM/dd')",
-        "order": {"_key": "asc"}
+        "script": "doc['date'].value.toOffsetDateTime().format(DateTimeFormatter.ofPattern('yyyy/MM/dd'))",
+        "order": {
+          "_key": "asc"
+        }
       }
     }
   }
@@ -243,10 +242,65 @@ Result :
   }
 }
 
+```
 
+Date hierarchy
+--------------
+
+### Parameters
+
+ - `field` : field to aggregate on. This parameter is mandatory
+ - `interval`: date interval used to create the hierarchy. Allowed values are: `years`, `months`, `days`, `hours`, `minutes`, `seconds` Default to `years`.
+ - `order` : order parameter to define how to sort result. Allowed parameters are `_key`, `_count` or sub aggregation name. Default to {"_count": "desc}.
+ - `size`: size parameter to define how many buckets should be returned. Default to 10.
+ - `shard_size`: how many buckets returned by each shards. Set to size if smaller, default to size if the search request needs to go to a single shard, and (size * 1.5 + 10) otherwise (more information here: https://www.elastic.co/guide/en/elasticsearch/reference/current/search-aggregations-bucket-terms-aggregation.html#_shard_size_3).
+ - `min_doc_count`: Return buckets containing at least `min_doc_count` document. Default to 0
+
+
+Example
+-------
 
 ```
 
+PUT calendar
+{
+  "mappings": {
+    "properties": {
+      "date": {
+        "type": "date"
+      }
+    }
+  }
+}
+
+PUT /calendar/_doc/1
+{
+  "date": "2012-01-10T02:47:28"
+}
+PUT /calendar/_doc/2
+{
+  "date": "2012-01-05T01:43:35"
+}
+PUT /calendar/_doc/3
+{
+  "date": "2012-05-01T12:24:19"
+}
+
+GET /calendar/_search?size=0
+{
+  "aggs": {
+    "tree": {
+      "date_hierarchy": {
+        "interval": "days",
+        "order": {
+          "_key": "asc"
+        }
+      }
+    }
+  }
+}
+
+```
 
 Installation
 ------------
