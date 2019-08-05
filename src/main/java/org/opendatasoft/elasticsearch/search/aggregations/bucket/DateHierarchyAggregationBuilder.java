@@ -173,6 +173,9 @@ public class DateHierarchyAggregationBuilder extends ValuesSourceAggregationBuil
         minDocCount = in.readVLong();
         interval = in.readString();
         order = InternalOrder.Streams.readOrder(in);
+        if (in.readBoolean()) {
+            timeZone = DateTimeZone.forID(in.readString());
+        }
     }
 
     private DateHierarchyAggregationBuilder(DateHierarchyAggregationBuilder clone, Builder factoriesBuilder,
@@ -197,6 +200,11 @@ public class DateHierarchyAggregationBuilder extends ValuesSourceAggregationBuil
         out.writeVLong(minDocCount);
         out.writeString(interval);
         order.writeTo(out);
+        boolean hasTimeZone = timeZone != null;
+        out.writeBoolean(hasTimeZone);
+        if (hasTimeZone) {
+            out.writeString(timeZone.getID());
+        }
     }
 
     /**
@@ -355,7 +363,7 @@ public class DateHierarchyAggregationBuilder extends ValuesSourceAggregationBuil
      */
     @Override
     protected int innerHashCode() {
-        return Objects.hash(interval, order, minDocCount, bucketCountThresholds);
+        return Objects.hash(interval, order, minDocCount, bucketCountThresholds, timeZone);
     }
 
     @Override
@@ -364,7 +372,8 @@ public class DateHierarchyAggregationBuilder extends ValuesSourceAggregationBuil
         return Objects.equals(interval, other.interval)
                 && Objects.equals(order, other.order)
                 && Objects.equals(minDocCount, other.minDocCount)
-                && Objects.equals(bucketCountThresholds, other.bucketCountThresholds);
+                && Objects.equals(bucketCountThresholds, other.bucketCountThresholds)
+                && Objects.equals(timeZone, other.timeZone);
     }
 
     @Override
