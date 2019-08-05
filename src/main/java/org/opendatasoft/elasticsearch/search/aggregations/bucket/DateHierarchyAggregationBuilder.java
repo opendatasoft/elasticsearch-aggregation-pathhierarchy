@@ -173,9 +173,7 @@ public class DateHierarchyAggregationBuilder extends ValuesSourceAggregationBuil
         minDocCount = in.readVLong();
         interval = in.readString();
         order = InternalOrder.Streams.readOrder(in);
-        if (in.readBoolean()) {
-            timeZone = DateTimeZone.forID(in.readString());
-        }
+        timeZone = in.readOptionalZoneId();
     }
 
     private DateHierarchyAggregationBuilder(DateHierarchyAggregationBuilder clone, Builder factoriesBuilder,
@@ -202,9 +200,7 @@ public class DateHierarchyAggregationBuilder extends ValuesSourceAggregationBuil
         order.writeTo(out);
         boolean hasTimeZone = timeZone != null;
         out.writeBoolean(hasTimeZone);
-        if (hasTimeZone) {
-            out.writeString(timeZone.getID());
-        }
+        out.writeOptionalZoneId(timeZone);
     }
 
     /**
