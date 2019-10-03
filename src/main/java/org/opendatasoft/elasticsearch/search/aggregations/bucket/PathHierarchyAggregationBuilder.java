@@ -1,5 +1,6 @@
 package org.opendatasoft.elasticsearch.search.aggregations.bucket;
 
+import org.elasticsearch.Version;
 import org.elasticsearch.common.ParseField;
 import org.elasticsearch.common.io.stream.StreamInput;
 import org.elasticsearch.common.io.stream.StreamOutput;
@@ -88,7 +89,7 @@ public class PathHierarchyAggregationBuilder extends ValuesSourceAggregationBuil
     }
 
     @Override
-    protected boolean serializeTargetValueType() {
+    protected boolean serializeTargetValueType(Version version) {
         return true;
     }
 
@@ -244,10 +245,10 @@ public class PathHierarchyAggregationBuilder extends ValuesSourceAggregationBuil
     }
 
     @Override
-    protected ValuesSourceAggregatorFactory<ValuesSource, ?> innerBuild(
+    protected ValuesSourceAggregatorFactory<ValuesSource> innerBuild(
             SearchContext context,
             ValuesSourceConfig<ValuesSource> config,
-            AggregatorFactory<?> parent,
+            AggregatorFactory parent,
             AggregatorFactories.Builder subFactoriesBuilder) throws IOException {
 
         if (minDepth > maxDepth)
@@ -301,12 +302,12 @@ public class PathHierarchyAggregationBuilder extends ValuesSourceAggregationBuil
      * Used for caching requests, amongst other things.
      */
     @Override
-    protected int innerHashCode() {
+    public int hashCode() {
         return Objects.hash(separator, minDepth, maxDepth, depth, order, minDocCount, bucketCountThresholds);
     }
 
     @Override
-    protected boolean innerEquals(Object obj) {
+    public boolean equals(Object obj) {
         PathHierarchyAggregationBuilder other = (PathHierarchyAggregationBuilder) obj;
         return Objects.equals(separator, other.separator)
                 && Objects.equals(minDepth, other.minDepth)
