@@ -61,7 +61,7 @@ public class InternalDateHierarchy extends InternalMultiBucketAggregation<Intern
             key = in.readBytesRef();
             name = in.readString();
             docCount = in.readLong();
-            aggregations = InternalAggregations.readAggregations(in);
+            aggregations = new InternalAggregations(in);
             level = in.readInt();
             int pathsSize = in.readInt();
             paths = new String[pathsSize];
@@ -109,24 +109,6 @@ public class InternalDateHierarchy extends InternalMultiBucketAggregation<Intern
         @Override
         public Aggregations getAggregations() {
             return aggregations;
-        }
-
-        /**
-         * Utility method of InternalDateHierarchy.doReduce()
-         */
-        InternalBucket reduce(List<InternalBucket> buckets, ReduceContext context) {
-            List<InternalAggregations> aggregationsList = new ArrayList<>(buckets.size());
-            InternalBucket reduced = null;
-            for (InternalBucket bucket : buckets) {
-                if (reduced == null) {
-                    reduced = bucket;
-                } else {
-                    reduced.docCount += bucket.docCount;
-                }
-                aggregationsList.add(bucket.aggregations);
-            }
-            reduced.aggregations = InternalAggregations.reduce(aggregationsList, context);
-            return reduced;
         }
 
         @Override
@@ -262,7 +244,7 @@ public class InternalDateHierarchy extends InternalMultiBucketAggregation<Intern
         PathSortedTree<String, InternalBucket> ordered = new PathSortedTree<>(order.comparator(null), size);
         for (List<InternalBucket> sameTermBuckets : buckets.values()) {
 
-            final InternalBucket b = sameTermBuckets.get(0).reduce(sameTermBuckets, reduceContext);
+            final InternalBucket b = reduceBucket(sameTermBuckets, reduceContext);
             if (b.getDocCount() >= minDocCount || !reduceContext.isFinalReduce()) {
                 reduceContext.consumeBucketsAndMaybeBreak(1);
                 ordered.add(b.paths, b);
@@ -274,6 +256,22 @@ public class InternalDateHierarchy extends InternalMultiBucketAggregation<Intern
         long sum_other_hierarchy_nodes = ordered.getFullSize() - size + otherHierarchyNodes;
         return new InternalDateHierarchy(getName(), ordered.getAsList(), order, minDocCount, requiredSize, shardSize,
                 sum_other_hierarchy_nodes, pipelineAggregators(), getMetaData());
+    }
+
+    @Override
+    protected InternalBucket reduceBucket(List<InternalBucket> buckets, ReduceContext context) {
+        List<InternalAggregations> aggregationsList = new ArrayList<>(buckets.size());
+        InternalBucket reduced = null;
+        for (InternalBucket bucket : buckets) {
+            if (reduced == null) {
+                reduced = bucket;
+            } else {
+                reduced.docCount += bucket.docCount;
+            }
+            aggregationsList.add(bucket.aggregations);
+        }
+        reduced.aggregations = InternalAggregations.reduce(aggregationsList, context);
+        return reduced;
     }
 
     @Override
@@ -323,12 +321,12 @@ public class InternalDateHierarchy extends InternalMultiBucketAggregation<Intern
     }
 
     @Override
-    protected int doHashCode() {
+    public int hashCode() {
         return Objects.hash(buckets, order, requiredSize, shardSize, otherHierarchyNodes, minDocCount);
     }
 
     @Override
-    protected boolean doEquals(Object obj) {
+    public boolean equals(Object obj) {
         InternalDateHierarchy that = (InternalDateHierarchy) obj;
         return Objects.equals(buckets, that.buckets)
                 && Objects.equals(order, that.order)

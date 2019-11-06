@@ -1,5 +1,6 @@
 package org.opendatasoft.elasticsearch.search.aggregations.bucket;
 
+import org.elasticsearch.Version;
 import org.elasticsearch.common.ParseField;
 import org.elasticsearch.common.Rounding;
 import org.elasticsearch.common.io.stream.StreamInput;
@@ -159,7 +160,7 @@ public class DateHierarchyAggregationBuilder extends ValuesSourceAggregationBuil
     }
 
     @Override
-    protected boolean serializeTargetValueType() {
+    protected boolean serializeTargetValueType(Version version) {
         return true;
     }
 
@@ -327,10 +328,10 @@ public class DateHierarchyAggregationBuilder extends ValuesSourceAggregationBuil
     }
 
     @Override
-    protected ValuesSourceAggregatorFactory<ValuesSource.Numeric, ?> innerBuild(
+    protected ValuesSourceAggregatorFactory<ValuesSource.Numeric> innerBuild(
             SearchContext context,
             ValuesSourceConfig<ValuesSource.Numeric> config,
-            AggregatorFactory<?> parent,
+            AggregatorFactory parent,
             Builder subFactoriesBuilder) throws IOException {
 
         final List<RoundingInfo> roundingsInfo = buildRoundings();
@@ -358,12 +359,12 @@ public class DateHierarchyAggregationBuilder extends ValuesSourceAggregationBuil
      * Used for caching requests, amongst other things.
      */
     @Override
-    protected int innerHashCode() {
+    public int hashCode() {
         return Objects.hash(interval, order, minDocCount, bucketCountThresholds, timeZone);
     }
 
     @Override
-    protected boolean innerEquals(Object obj) {
+    public boolean equals(Object obj) {
         DateHierarchyAggregationBuilder other = (DateHierarchyAggregationBuilder) obj;
         return Objects.equals(interval, other.interval)
                 && Objects.equals(order, other.order)

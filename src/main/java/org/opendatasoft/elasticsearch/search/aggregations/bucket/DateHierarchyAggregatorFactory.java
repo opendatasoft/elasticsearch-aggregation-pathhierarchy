@@ -23,7 +23,7 @@ import java.util.Map;
  * The factory of aggregators.
  * ValuesSourceAggregatorFactory extends {@link AggregatorFactory}
  */
-class DateHierarchyAggregatorFactory extends ValuesSourceAggregatorFactory<ValuesSource.Numeric, DateHierarchyAggregatorFactory> {
+class DateHierarchyAggregatorFactory extends ValuesSourceAggregatorFactory<ValuesSource.Numeric> {
 
     private long minDocCount;
     private BucketOrder order;
@@ -37,7 +37,7 @@ class DateHierarchyAggregatorFactory extends ValuesSourceAggregatorFactory<Value
                                    long minDocCount,
                                    DateHierarchyAggregator.BucketCountThresholds bucketCountThresholds,
                                    SearchContext context,
-                                   AggregatorFactory<?> parent,
+                                   AggregatorFactory parent,
                                    AggregatorFactories.Builder subFactoriesBuilder,
                                    Map<String, Object> metaData
     ) throws IOException {

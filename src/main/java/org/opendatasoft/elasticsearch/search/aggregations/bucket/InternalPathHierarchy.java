@@ -67,7 +67,7 @@ public class InternalPathHierarchy extends InternalMultiBucketAggregation<Intern
         public InternalBucket(StreamInput in) throws IOException {
             termBytes = in.readBytesRef();
             docCount = in.readLong();
-            aggregations = InternalAggregations.readAggregations(in);
+            aggregations = new InternalAggregations(in);
             level = in.readInt();
             minDepth = in.readInt();
             basename = in.readString();
@@ -118,24 +118,6 @@ public class InternalPathHierarchy extends InternalMultiBucketAggregation<Intern
         @Override
         public Aggregations getAggregations() {
             return aggregations;
-        }
-
-        /**
-         * Utility method of InternalPathHierarchy.doReduce()
-         */
-        InternalBucket reduce(List<InternalBucket> buckets, ReduceContext context) {
-            List<InternalAggregations> aggregationsList = new ArrayList<>(buckets.size());
-            InternalBucket reduced = null;
-            for (InternalBucket bucket : buckets) {
-                if (reduced == null) {
-                    reduced = bucket;
-                } else {
-                    reduced.docCount += bucket.docCount;
-                }
-                aggregationsList.add(bucket.aggregations);
-            }
-            reduced.aggregations = InternalAggregations.reduce(aggregationsList, context);
-            return reduced;
         }
 
         @Override
@@ -275,7 +257,7 @@ public class InternalPathHierarchy extends InternalMultiBucketAggregation<Intern
         final int size = !reduceContext.isFinalReduce() ? buckets.size() : Math.min(requiredSize, buckets.size());
         PathSortedTree<String, InternalBucket> ordered = new PathSortedTree<>(order.comparator(null), size);
         for (List<InternalBucket> sameTermBuckets : buckets.values()) {
-            final InternalBucket b = sameTermBuckets.get(0).reduce(sameTermBuckets, reduceContext);
+            final InternalBucket b = reduceBucket(sameTermBuckets, reduceContext);
             if (b.getDocCount() >= minDocCount || !reduceContext.isFinalReduce()) {
                 reduceContext.consumeBucketsAndMaybeBreak(1);
                 String [] pathsForTree;
@@ -293,6 +275,25 @@ public class InternalPathHierarchy extends InternalMultiBucketAggregation<Intern
         long sum_other_hierarchy_nodes = ordered.getFullSize() - size + otherHierarchyNodes;
         return new InternalPathHierarchy(getName(), ordered.getAsList(), order, minDocCount, requiredSize, shardSize,
                 sum_other_hierarchy_nodes, separator, pipelineAggregators(), getMetaData());
+    }
+
+    /**
+     * Utility method of InternalPathHierarchy.doReduce()
+     */
+    @Override
+    protected InternalBucket reduceBucket(List<InternalBucket> buckets, ReduceContext context) {
+        List<InternalAggregations> aggregationsList = new ArrayList<>(buckets.size());
+        InternalBucket reduced = null;
+        for (InternalBucket bucket : buckets) {
+            if (reduced == null) {
+                reduced = bucket;
+            } else {
+                reduced.docCount += bucket.docCount;
+            }
+            aggregationsList.add(bucket.aggregations);
+        }
+        reduced.aggregations = InternalAggregations.reduce(aggregationsList, context);
+        return reduced;
     }
 
     @Override
@@ -344,12 +345,12 @@ public class InternalPathHierarchy extends InternalMultiBucketAggregation<Intern
     }
 
     @Override
-    protected int doHashCode() {
+    public int hashCode() {
         return Objects.hash(buckets, separator, order, requiredSize, shardSize, otherHierarchyNodes, minDocCount);
     }
 
     @Override
-    protected boolean doEquals(Object obj) {
+    public boolean equals(Object obj) {
         InternalPathHierarchy that = (InternalPathHierarchy) obj;
         return Objects.equals(buckets, that.buckets)
                 && Objects.equals(separator, that.separator)

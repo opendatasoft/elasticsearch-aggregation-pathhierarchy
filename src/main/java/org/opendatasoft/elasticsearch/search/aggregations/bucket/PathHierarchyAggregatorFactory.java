@@ -30,7 +30,7 @@ import java.util.Map;
  * The factory of aggregators.
  * ValuesSourceAggregatorFactory extends {@link AggregatorFactory}
  */
-class PathHierarchyAggregatorFactory extends ValuesSourceAggregatorFactory<ValuesSource, PathHierarchyAggregatorFactory> {
+class PathHierarchyAggregatorFactory extends ValuesSourceAggregatorFactory<ValuesSource> {
 
     private BytesRef separator;
     private int minDepth;
@@ -50,7 +50,7 @@ class PathHierarchyAggregatorFactory extends ValuesSourceAggregatorFactory<Value
                                    long minDocCount,
                                    PathHierarchyAggregator.BucketCountThresholds bucketCountThresholds,
                                    SearchContext context,
-                                   AggregatorFactory<?> parent,
+                                   AggregatorFactory parent,
                                    AggregatorFactories.Builder subFactoriesBuilder,
                                    Map<String, Object> metaData
     ) throws IOException {
