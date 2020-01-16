@@ -7,6 +7,7 @@ import org.apache.lucene.util.BytesRefBuilder;
 import org.apache.lucene.util.FutureArrays;
 import org.elasticsearch.index.fielddata.SortedBinaryDocValues;
 import org.elasticsearch.index.fielddata.SortingBinaryDocValues;
+import org.elasticsearch.index.query.QueryShardContext;
 import org.elasticsearch.search.aggregations.Aggregator;
 import org.elasticsearch.search.aggregations.BucketOrder;
 import org.elasticsearch.search.aggregations.InternalOrder;
@@ -49,7 +50,7 @@ class PathHierarchyAggregatorFactory extends ValuesSourceAggregatorFactory<Value
                                    BucketOrder order,
                                    long minDocCount,
                                    PathHierarchyAggregator.BucketCountThresholds bucketCountThresholds,
-                                   SearchContext context,
+                                   QueryShardContext context,
                                    AggregatorFactory parent,
                                    AggregatorFactories.Builder subFactoriesBuilder,
                                    Map<String, Object> metaData
@@ -66,13 +67,14 @@ class PathHierarchyAggregatorFactory extends ValuesSourceAggregatorFactory<Value
 
     @Override
     protected Aggregator createUnmapped(
+            SearchContext searchContext,
             Aggregator parent,
             List<PipelineAggregator> pipelineAggregators,
             Map<String,
             Object> metaData) throws IOException {
         final InternalAggregation aggregation = new InternalPathHierarchy(name, new ArrayList<>(), order, minDocCount,
                 bucketCountThresholds.getRequiredSize(), bucketCountThresholds.getShardSize(), 0, separator, pipelineAggregators, metaData);
-        return new NonCollectingAggregator(name, context, parent, factories, pipelineAggregators, metaData) {
+        return new NonCollectingAggregator(name, searchContext, parent, factories, pipelineAggregators, metaData) {
             {
                 // even in the case of an unmapped aggregator, validate the
                 // order
@@ -86,7 +88,7 @@ class PathHierarchyAggregatorFactory extends ValuesSourceAggregatorFactory<Value
 
     @Override
     protected Aggregator doCreateInternal(
-            ValuesSource valuesSource, Aggregator parent,
+            ValuesSource valuesSource, SearchContext searchContext, Aggregator parent,
             boolean collectsFromSingleBucket, List<PipelineAggregator> pipelineAggregators,
             Map<String, Object> metaData) throws IOException {
 
@@ -102,7 +104,7 @@ class PathHierarchyAggregatorFactory extends ValuesSourceAggregatorFactory<Value
         }
         bucketCountThresholds.ensureValidity();
         return new PathHierarchyAggregator(
-                name, factories, context,
+                name, factories, searchContext,
                 valuesSourceBytes, order, minDocCount, bucketCountThresholds, separator, minDepth,
                 parent, pipelineAggregators, metaData);
     }

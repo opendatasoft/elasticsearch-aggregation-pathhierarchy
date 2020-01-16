@@ -130,7 +130,7 @@ public class DateHierarchyAggregator extends BucketsAggregator {
             BucketOrder order,
             long minDocCount,
             BucketCountThresholds bucketCountThresholds,
-            List<DateHierarchyAggregationBuilder.RoundingInfo> roundingsInfo, SearchContext aggregationContext,
+            List<DateHierarchyAggregationBuilder.RoundingInfo> roundingsInfo,
             Aggregator parent,
             List<PipelineAggregator> pipelineAggregators,
             Map<String, Object> metaData

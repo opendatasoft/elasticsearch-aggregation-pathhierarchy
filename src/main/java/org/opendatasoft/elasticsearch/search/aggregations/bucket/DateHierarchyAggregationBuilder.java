@@ -11,6 +11,7 @@ import org.elasticsearch.common.xcontent.ObjectParser;
 import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.common.xcontent.XContentParser;
 import org.elasticsearch.index.mapper.DateFieldMapper;
+import org.elasticsearch.index.query.QueryShardContext;
 import org.elasticsearch.search.DocValueFormat;
 import org.elasticsearch.search.aggregations.AggregationBuilder;
 import org.elasticsearch.search.aggregations.AggregatorFactories.Builder;
@@ -25,7 +26,6 @@ import org.elasticsearch.search.aggregations.support.ValuesSourceType;
 import org.elasticsearch.search.aggregations.support.ValuesSourceAggregationBuilder;
 import org.elasticsearch.search.aggregations.support.ValuesSourceAggregatorFactory;
 import org.elasticsearch.search.aggregations.support.ValuesSourceParserHelper;
-import org.elasticsearch.search.internal.SearchContext;
 
 import java.io.IOException;
 import java.time.ZoneId;
@@ -329,7 +329,7 @@ public class DateHierarchyAggregationBuilder extends ValuesSourceAggregationBuil
 
     @Override
     protected ValuesSourceAggregatorFactory<ValuesSource.Numeric> innerBuild(
-            SearchContext context,
+            QueryShardContext context,
             ValuesSourceConfig<ValuesSource.Numeric> config,
             AggregatorFactory parent,
             Builder subFactoriesBuilder) throws IOException {
