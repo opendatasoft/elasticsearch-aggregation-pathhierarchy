@@ -327,7 +327,7 @@ To install it, launch this command in Elasticsearch directory replacing the url 
 | 7.0.1 | 7.0.1.0 | https://github.com/opendatasoft/elasticsearch-aggregation-pathhierarchy/releases/download/v7.0.1.0/pathhierarchy-aggregation-7.0.1.0.zip |
 | 7.1.1 | 7.1.1.0 | https://github.com/opendatasoft/elasticsearch-aggregation-pathhierarchy/releases/download/v7.1.1.0/pathhierarchy-aggregation-7.1.1.0.zip |
 | 7.2.0 | 7.2.0.1 | https://github.com/opendatasoft/elasticsearch-aggregation-pathhierarchy/releases/download/v7.2.0.1/pathhierarchy-aggregation-7.2.0.1.zip |
-| 7.4.0 | 7.4.0.1 | https://github.com/opendatasoft/elasticsearch-aggregation-pathhierarchy/releases/download/v7.4.0.1/pathhierarchy-aggregation-7.4.0.1.zip |
+| 7.4.2 | 7.4.2.0 | https://github.com/opendatasoft/elasticsearch-aggregation-pathhierarchy/releases/download/v7.4.2.0/pathhierarchy-aggregation-7.4.2.0.zip |
 | 7.5.1 | 7.5.1.0 | https://github.com/opendatasoft/elasticsearch-aggregation-pathhierarchy/releases/download/v7.5.1.0/pathhierarchy-aggregation-7.5.1.0.zip |
 
 
