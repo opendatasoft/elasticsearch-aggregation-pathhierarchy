@@ -1,5 +1,6 @@
 package org.opendatasoft.elasticsearch.search.aggregations.bucket;
 
+import org.elasticsearch.index.query.QueryShardContext;
 import org.elasticsearch.search.aggregations.Aggregator;
 import org.elasticsearch.search.aggregations.AggregatorFactories;
 import org.elasticsearch.search.aggregations.AggregatorFactory;
@@ -36,7 +37,7 @@ class DateHierarchyAggregatorFactory extends ValuesSourceAggregatorFactory<Value
                                    List<DateHierarchyAggregationBuilder.RoundingInfo> roundingsInfo,
                                    long minDocCount,
                                    DateHierarchyAggregator.BucketCountThresholds bucketCountThresholds,
-                                   SearchContext context,
+                                   QueryShardContext context,
                                    AggregatorFactory parent,
                                    AggregatorFactories.Builder subFactoriesBuilder,
                                    Map<String, Object> metaData
@@ -50,13 +51,14 @@ class DateHierarchyAggregatorFactory extends ValuesSourceAggregatorFactory<Value
 
     @Override
     protected Aggregator createUnmapped(
+            SearchContext searchContext,
             Aggregator parent,
             List<PipelineAggregator> pipelineAggregators,
             Map<String,
             Object> metaData) throws IOException {
         final InternalAggregation aggregation = new InternalDateHierarchy(name, new ArrayList<>(), order, minDocCount,
                 bucketCountThresholds.getRequiredSize(), bucketCountThresholds.getShardSize(), 0, pipelineAggregators, metaData);
-        return new NonCollectingAggregator(name, context, parent, factories, pipelineAggregators, metaData) {
+        return new NonCollectingAggregator(name, searchContext, parent, factories, pipelineAggregators, metaData) {
             {
                 // even in the case of an unmapped aggregator, validate the
                 // order
@@ -70,7 +72,7 @@ class DateHierarchyAggregatorFactory extends ValuesSourceAggregatorFactory<Value
 
     @Override
     protected Aggregator doCreateInternal(
-            ValuesSource.Numeric valuesSource, Aggregator parent,
+            ValuesSource.Numeric valuesSource, SearchContext searchContext, Aggregator parent,
             boolean collectsFromSingleBucket, List<PipelineAggregator> pipelineAggregators,
             Map<String, Object> metaData) throws IOException {
 
@@ -85,9 +87,9 @@ class DateHierarchyAggregatorFactory extends ValuesSourceAggregatorFactory<Value
         }
         bucketCountThresholds.ensureValidity();
         return new DateHierarchyAggregator(
-                name, factories, context,
+                name, factories, searchContext,
                 valuesSource, order, minDocCount, bucketCountThresholds, roundingsInfo,
-                context, parent, pipelineAggregators, metaData);
+                parent, pipelineAggregators, metaData);
     }
 
 }
