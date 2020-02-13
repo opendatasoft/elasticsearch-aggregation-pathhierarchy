@@ -230,7 +230,7 @@ public class InternalPathHierarchy extends InternalMultiBucketAggregation<Intern
      * Reduces the given aggregations to a single one and returns it.
      */
     @Override
-    public InternalPathHierarchy doReduce(List<InternalAggregation> aggregations, ReduceContext reduceContext) {
+    public InternalPathHierarchy reduce(List<InternalAggregation> aggregations, ReduceContext reduceContext) {
         Map<BytesRef, List<InternalBucket>> buckets = null;
         long otherHierarchyNodes = 0;
 

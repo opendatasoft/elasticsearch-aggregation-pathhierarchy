@@ -19,10 +19,10 @@ import org.elasticsearch.search.aggregations.AggregatorFactory;
 import org.elasticsearch.search.aggregations.BucketOrder;
 import org.elasticsearch.search.aggregations.InternalOrder;
 import org.elasticsearch.search.aggregations.bucket.MultiBucketAggregationBuilder;
+import org.elasticsearch.search.aggregations.support.CoreValuesSourceType;
 import org.elasticsearch.search.aggregations.support.ValuesSource;
 import org.elasticsearch.search.aggregations.support.ValueType;
 import org.elasticsearch.search.aggregations.support.ValuesSourceConfig;
-import org.elasticsearch.search.aggregations.support.ValuesSourceType;
 import org.elasticsearch.search.aggregations.support.ValuesSourceAggregationBuilder;
 import org.elasticsearch.search.aggregations.support.ValuesSourceAggregatorFactory;
 import org.elasticsearch.search.aggregations.support.ValuesSourceParserHelper;
@@ -156,7 +156,7 @@ public class DateHierarchyAggregationBuilder extends ValuesSourceAggregationBuil
 
 
     private DateHierarchyAggregationBuilder(String name, ValueType valueType) {
-        super(name, ValuesSourceType.ANY, valueType);
+        super(name, CoreValuesSourceType.ANY, valueType);
     }
 
     @Override
@@ -169,7 +169,7 @@ public class DateHierarchyAggregationBuilder extends ValuesSourceAggregationBuil
      *
      */
     public DateHierarchyAggregationBuilder(StreamInput in) throws IOException {
-        super(in, ValuesSourceType.ANY);
+        super(in, CoreValuesSourceType.ANY);
         bucketCountThresholds = new DateHierarchyAggregator.BucketCountThresholds(in);
         minDocCount = in.readVLong();
         interval = in.readString();

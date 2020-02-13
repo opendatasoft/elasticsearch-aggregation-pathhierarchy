@@ -216,7 +216,7 @@ public class InternalDateHierarchy extends InternalMultiBucketAggregation<Intern
      * Reduces the given aggregations to a single one and returns it.
      */
     @Override
-    public InternalDateHierarchy doReduce(List<InternalAggregation> aggregations, ReduceContext reduceContext) {
+    public InternalDateHierarchy reduce(List<InternalAggregation> aggregations, ReduceContext reduceContext) {
         Map<BytesRef, List<InternalBucket>> buckets = null;
         long otherHierarchyNodes = 0;
 
