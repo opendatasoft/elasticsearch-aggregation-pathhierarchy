@@ -205,7 +205,7 @@ public class PathHierarchyAggregator extends BucketsAggregator {
         PathSortedTree<String, InternalPathHierarchy.InternalBucket> pathSortedTree = new PathSortedTree<>(order.comparator(this), size);
 
         InternalPathHierarchy.InternalBucket spare = null;
-        for (int i = 0; i < bucketOrds.size(); i++) {
+        for (int i = 0; i < size; i++) {
             spare = new InternalPathHierarchy.InternalBucket(0, null, null, new BytesRef(), 0, 0, null);
             BytesRef term = new BytesRef();
             bucketOrds.get(i, term);
