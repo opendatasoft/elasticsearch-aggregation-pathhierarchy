@@ -73,6 +73,7 @@ teardown:
                 "field": "date",
                 "interval": "months",
                 "order": [{"_key": "asc"}],
+                "size" : 3,
                 "shard_size": 3
               }
             }
