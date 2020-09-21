@@ -197,7 +197,7 @@ public class DateHierarchyAggregator extends BucketsAggregator {
         PathSortedTree<String, InternalDateHierarchy.InternalBucket> pathSortedTree = new PathSortedTree<>(order.comparator(this), size);
 
         InternalDateHierarchy.InternalBucket spare = null;
-        for (int i = 0; i < bucketOrds.size(); i++) {
+        for (int i = 0; i < size; i++) {
             spare = new InternalDateHierarchy.InternalBucket(0, null, null, null, 0, null);
 
             BytesRef term = new BytesRef();
