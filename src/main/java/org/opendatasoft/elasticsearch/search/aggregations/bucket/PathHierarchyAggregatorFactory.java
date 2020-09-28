@@ -9,14 +9,14 @@ import org.elasticsearch.index.fielddata.SortedBinaryDocValues;
 import org.elasticsearch.index.fielddata.SortingBinaryDocValues;
 import org.elasticsearch.index.query.QueryShardContext;
 import org.elasticsearch.search.aggregations.Aggregator;
-import org.elasticsearch.search.aggregations.BucketOrder;
-import org.elasticsearch.search.aggregations.InternalOrder;
 import org.elasticsearch.search.aggregations.AggregatorFactories;
 import org.elasticsearch.search.aggregations.AggregatorFactory;
+import org.elasticsearch.search.aggregations.BucketOrder;
+import org.elasticsearch.search.aggregations.CardinalityUpperBound;
 import org.elasticsearch.search.aggregations.InternalAggregation;
+import org.elasticsearch.search.aggregations.InternalOrder;
 import org.elasticsearch.search.aggregations.NonCollectingAggregator;
 import org.elasticsearch.search.aggregations.bucket.BucketUtils;
-import org.elasticsearch.search.aggregations.pipeline.PipelineAggregator;
 import org.elasticsearch.search.aggregations.support.ValuesSource;
 import org.elasticsearch.search.aggregations.support.ValuesSourceAggregatorFactory;
 import org.elasticsearch.search.aggregations.support.ValuesSourceConfig;
@@ -24,14 +24,13 @@ import org.elasticsearch.search.internal.SearchContext;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.List;
 import java.util.Map;
 
 /**
  * The factory of aggregators.
  * ValuesSourceAggregatorFactory extends {@link AggregatorFactory}
  */
-class PathHierarchyAggregatorFactory extends ValuesSourceAggregatorFactory<ValuesSource> {
+class PathHierarchyAggregatorFactory extends ValuesSourceAggregatorFactory {
 
     private BytesRef separator;
     private int minDepth;
@@ -42,7 +41,7 @@ class PathHierarchyAggregatorFactory extends ValuesSourceAggregatorFactory<Value
     private final PathHierarchyAggregator.BucketCountThresholds bucketCountThresholds;
 
     PathHierarchyAggregatorFactory(String name,
-                                   ValuesSourceConfig<ValuesSource> config,
+                                   ValuesSourceConfig config,
                                    String separator,
                                    int minDepth,
                                    int maxDepth,
@@ -53,9 +52,9 @@ class PathHierarchyAggregatorFactory extends ValuesSourceAggregatorFactory<Value
                                    QueryShardContext context,
                                    AggregatorFactory parent,
                                    AggregatorFactories.Builder subFactoriesBuilder,
-                                   Map<String, Object> metaData
+                                   Map<String, Object> metadata
     ) throws IOException {
-        super(name, config, context, parent, subFactoriesBuilder, metaData);
+        super(name, config, context, parent, subFactoriesBuilder, metadata);
         this.separator = new BytesRef(separator);
         this.minDepth = minDepth;
         this.maxDepth = maxDepth;
@@ -69,30 +68,30 @@ class PathHierarchyAggregatorFactory extends ValuesSourceAggregatorFactory<Value
     protected Aggregator createUnmapped(
             SearchContext searchContext,
             Aggregator parent,
-            List<PipelineAggregator> pipelineAggregators,
             Map<String,
-            Object> metaData) throws IOException {
+                    Object> metadata) throws IOException {
         final InternalAggregation aggregation = new InternalPathHierarchy(name, new ArrayList<>(), order, minDocCount,
-                bucketCountThresholds.getRequiredSize(), bucketCountThresholds.getShardSize(), 0, separator, pipelineAggregators, metaData);
-        return new NonCollectingAggregator(name, searchContext, parent, factories, pipelineAggregators, metaData) {
+                bucketCountThresholds.getRequiredSize(), bucketCountThresholds.getShardSize(), 0, separator, metadata);
+        return new NonCollectingAggregator(name, searchContext, parent, factories, metadata) {
             {
                 // even in the case of an unmapped aggregator, validate the
                 // order
-                InternalOrder.validate(order, this);
+                order.validate(this);
             }
 
             @Override
-            public InternalAggregation buildEmptyAggregation() { return aggregation; }
+            public InternalAggregation buildEmptyAggregation() {
+                return aggregation;
+            }
         };
     }
 
     @Override
     protected Aggregator doCreateInternal(
-            ValuesSource valuesSource, SearchContext searchContext, Aggregator parent,
-            boolean collectsFromSingleBucket, List<PipelineAggregator> pipelineAggregators,
-            Map<String, Object> metaData) throws IOException {
+            SearchContext searchContext, Aggregator parent, CardinalityUpperBound cardinality, Map<String, Object> metadata
+    ) throws IOException {
 
-        ValuesSource valuesSourceBytes = new HierarchyValuesSource(valuesSource, separator, minDepth, maxDepth, keepBlankPath);
+        ValuesSource valuesSourceBytes = new HierarchyValuesSource(config.getValuesSource(), separator, minDepth, maxDepth, keepBlankPath);
         PathHierarchyAggregator.BucketCountThresholds bucketCountThresholds = new
                 PathHierarchyAggregator.BucketCountThresholds(this.bucketCountThresholds);
         if (!InternalOrder.isKeyOrder(order)
@@ -106,17 +105,19 @@ class PathHierarchyAggregatorFactory extends ValuesSourceAggregatorFactory<Value
         return new PathHierarchyAggregator(
                 name, factories, searchContext,
                 valuesSourceBytes, order, minDocCount, bucketCountThresholds, separator, minDepth,
-                parent, pipelineAggregators, metaData);
+                parent, metadata);
     }
 
     /**
      * A list of per-document binary values, sorted according to {@link BytesRef}.
      * There might be dups however.
+     *
      * @see ValuesSource
      */
     private static class HierarchyValues extends SortingBinaryDocValues {
 
-        /** valuesSource is a list of per-document binary values, sorted according to {@link BytesRef#compareTo(BytesRef)}
+        /**
+         * valuesSource is a list of per-document binary values, sorted according to {@link BytesRef#compareTo(BytesRef)}
          * (warning, there might be dups however).
          */
         private SortedBinaryDocValues valuesSource;
@@ -136,22 +137,22 @@ class PathHierarchyAggregatorFactory extends ValuesSourceAggregatorFactory<Value
 
         /**
          * Handles iterations on doc values:
-         *  Advance the iterator to exactly target and return whether target has a value.
-         *  target must be greater than or equal to the current doc ID and must be a valid doc ID, ie. &ge; 0 and &lt; maxDoc.
-         *  After this method returns, docID() returns target.
+         * Advance the iterator to exactly target and return whether target has a value.
+         * target must be greater than or equal to the current doc ID and must be a valid doc ID, ie. &ge; 0 and &lt; maxDoc.
+         * After this method returns, docID() returns target.
          */
         @Override
         public boolean advanceExact(int docId) throws IOException {
             if (valuesSource.advanceExact(docId)) {
                 count = 0;
                 int t = 0;
-                for (int i=0; i < valuesSource.docValueCount(); i++) {
+                for (int i = 0; i < valuesSource.docValueCount(); i++) {
                     int depth = 0;
                     BytesRef val = valuesSource.nextValue();
                     BytesRefBuilder cleanVal = new BytesRefBuilder();
                     int startNewValOffset = -1;
 
-                    for (int offset=0; offset < val.length; offset++) {
+                    for (int offset = 0; offset < val.length; offset++) {
                         // it is a separator
                         if (val.length - offset >= separator.length &&
                                 FutureArrays.equals(
@@ -159,7 +160,7 @@ class PathHierarchyAggregatorFactory extends ValuesSourceAggregatorFactory<Value
                                         val.bytes, val.offset + offset, val.offset + offset + separator.length)) {
                             // ignore separator at the beginning
                             if (offset == 0) {
-                                offset += separator.length -1;
+                                offset += separator.length - 1;
                                 continue;
                             }
 
@@ -171,14 +172,14 @@ class PathHierarchyAggregatorFactory extends ValuesSourceAggregatorFactory<Value
                                 }
                                 startNewValOffset = -1;
                                 cleanVal.append(separator);
-                                depth ++;
-                            // two separators following each other
+                                depth++;
+                                // two separators following each other
                             } else if (keepBlankPath) {
                                 count++;
                                 growExact();
                                 values[t++].copyBytes(cleanVal);
                                 cleanVal.append(separator);
-                                depth ++;
+                                depth++;
                             }
 
                             if (maxDepth >= 0 && depth > maxDepth) {
@@ -229,7 +230,7 @@ class PathHierarchyAggregatorFactory extends ValuesSourceAggregatorFactory<Value
         private final int maxDepth;
         private final boolean twoSepAsOne;
 
-        private HierarchyValuesSource(ValuesSource values, BytesRef separator, int minDepth, int maxDepth, boolean twoSepAsOne){
+        private HierarchyValuesSource(ValuesSource values, BytesRef separator, int minDepth, int maxDepth, boolean twoSepAsOne) {
             this.values = values;
             this.separator = separator;
             this.minDepth = minDepth;

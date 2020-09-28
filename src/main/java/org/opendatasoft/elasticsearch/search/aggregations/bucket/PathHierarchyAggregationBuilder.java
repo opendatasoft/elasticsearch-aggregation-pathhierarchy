@@ -10,18 +10,15 @@ import org.elasticsearch.common.xcontent.XContentParser;
 import org.elasticsearch.index.query.QueryShardContext;
 import org.elasticsearch.search.aggregations.AggregationBuilder;
 import org.elasticsearch.search.aggregations.AggregatorFactories;
-import org.elasticsearch.search.aggregations.AggregatorFactory;
 import org.elasticsearch.search.aggregations.AggregatorFactories.Builder;
+import org.elasticsearch.search.aggregations.AggregatorFactory;
 import org.elasticsearch.search.aggregations.BucketOrder;
 import org.elasticsearch.search.aggregations.InternalOrder;
-import org.elasticsearch.search.aggregations.bucket.MultiBucketAggregationBuilder;
 import org.elasticsearch.search.aggregations.support.CoreValuesSourceType;
-import org.elasticsearch.search.aggregations.support.ValuesSource;
 import org.elasticsearch.search.aggregations.support.ValuesSourceAggregationBuilder;
 import org.elasticsearch.search.aggregations.support.ValuesSourceAggregatorFactory;
 import org.elasticsearch.search.aggregations.support.ValuesSourceConfig;
-import org.elasticsearch.search.aggregations.support.ValuesSourceParserHelper;
-import org.elasticsearch.search.aggregations.support.ValueType;
+import org.elasticsearch.search.aggregations.support.ValuesSourceType;
 
 import java.io.IOException;
 import java.util.List;
@@ -32,8 +29,7 @@ import java.util.Objects;
 /**
  * The builder of the aggregatorFactory. Also implements the parsing of the request.
  */
-public class PathHierarchyAggregationBuilder extends ValuesSourceAggregationBuilder<ValuesSource, PathHierarchyAggregationBuilder>
-        implements MultiBucketAggregationBuilder {
+public class PathHierarchyAggregationBuilder extends ValuesSourceAggregationBuilder<PathHierarchyAggregationBuilder> {
     public static final String NAME = "path_hierarchy";
 
     public static final ParseField SEPARATOR_FIELD = new ParseField("separator");
@@ -48,11 +44,11 @@ public class PathHierarchyAggregationBuilder extends ValuesSourceAggregationBuil
 
     public static final PathHierarchyAggregator.BucketCountThresholds DEFAULT_BUCKET_COUNT_THRESHOLDS = new
             PathHierarchyAggregator.BucketCountThresholds(10, -1);
-    private static final ObjectParser<PathHierarchyAggregationBuilder, Void> PARSER;
-    static {
-        PARSER = new ObjectParser<>(PathHierarchyAggregationBuilder.NAME);
-        ValuesSourceParserHelper.declareAnyFields(PARSER, true, true);
+    public static final ObjectParser<PathHierarchyAggregationBuilder, String> PARSER =
+            ObjectParser.fromBuilder(NAME, PathHierarchyAggregationBuilder::new);
 
+    static {
+        ValuesSourceAggregationBuilder.declareFields(PARSER, true, true, false);
         PARSER.declareString(PathHierarchyAggregationBuilder::separator, SEPARATOR_FIELD);
         PARSER.declareInt(PathHierarchyAggregationBuilder::minDepth, MIN_DEPTH_FIELD);
         PARSER.declareInt(PathHierarchyAggregationBuilder::maxDepth, MAX_DEPTH_FIELD);
@@ -66,7 +62,7 @@ public class PathHierarchyAggregationBuilder extends ValuesSourceAggregationBuil
     }
 
     public static AggregationBuilder parse(String aggregationName, XContentParser parser) throws IOException {
-        return PARSER.parse(parser, new PathHierarchyAggregationBuilder(aggregationName, null), null);
+        return PARSER.parse(parser, new PathHierarchyAggregationBuilder(aggregationName), null);
     }
 
     private static final String DEFAULT_SEPARATOR = "/";
@@ -84,8 +80,8 @@ public class PathHierarchyAggregationBuilder extends ValuesSourceAggregationBuil
             DEFAULT_BUCKET_COUNT_THRESHOLDS);
 
 
-    private PathHierarchyAggregationBuilder(String name, ValueType valueType) {
-        super(name, CoreValuesSourceType.ANY, valueType);
+    private PathHierarchyAggregationBuilder(String name) {
+        super(name);
     }
 
     @Override
@@ -95,10 +91,9 @@ public class PathHierarchyAggregationBuilder extends ValuesSourceAggregationBuil
 
     /**
      * Read from a stream
-     *
      */
     public PathHierarchyAggregationBuilder(StreamInput in) throws IOException {
-        super(in, CoreValuesSourceType.ANY);
+        super(in);
         bucketCountThresholds = new PathHierarchyAggregator.BucketCountThresholds(in);
         separator = in.readString();
         minDocCount = in.readVLong();
@@ -110,8 +105,8 @@ public class PathHierarchyAggregationBuilder extends ValuesSourceAggregationBuil
     }
 
     private PathHierarchyAggregationBuilder(PathHierarchyAggregationBuilder clone, Builder factoriesBuilder,
-                                           Map<String, Object> metaData) {
-        super(clone, factoriesBuilder, metaData);
+                                            Map<String, Object> metadata) {
+        super(clone, factoriesBuilder, metadata);
         separator = clone.separator;
         minDepth = clone.minDepth;
         maxDepth = clone.maxDepth;
@@ -123,8 +118,13 @@ public class PathHierarchyAggregationBuilder extends ValuesSourceAggregationBuil
     }
 
     @Override
-    protected AggregationBuilder shallowCopy(AggregatorFactories.Builder factoriesBuilder, Map<String, Object> metaData) {
-        return new PathHierarchyAggregationBuilder(this, factoriesBuilder, metaData);
+    protected ValuesSourceType defaultValueSourceType() {
+        return CoreValuesSourceType.BYTES;
+    }
+
+    @Override
+    protected AggregationBuilder shallowCopy(AggregatorFactories.Builder factoriesBuilder, Map<String, Object> metadata) {
+        return new PathHierarchyAggregationBuilder(this, factoriesBuilder, metadata);
     }
 
     /**
@@ -167,13 +167,15 @@ public class PathHierarchyAggregationBuilder extends ValuesSourceAggregationBuil
         return this;
     }
 
-    /** Set the order in which the buckets will be returned. It returns the builder so that calls
-     *  can be chained. A tie-breaker may be added to avoid non-deterministic ordering. */
+    /**
+     * Set the order in which the buckets will be returned. It returns the builder so that calls
+     * can be chained. A tie-breaker may be added to avoid non-deterministic ordering.
+     */
     private PathHierarchyAggregationBuilder order(BucketOrder order) {
         if (order == null) {
             throw new IllegalArgumentException("[order] must not be null: [" + name + "]");
         }
-        if(order instanceof InternalOrder.CompoundOrder || InternalOrder.isKeyOrder(order)) {
+        if (order instanceof InternalOrder.CompoundOrder || InternalOrder.isKeyOrder(order)) {
             this.order = order; // if order already contains a tie-breaker we are good to go
         } else { // otherwise add a tie-breaker by using a compound order
             this.order = BucketOrder.compound(order);
@@ -203,8 +205,10 @@ public class PathHierarchyAggregationBuilder extends ValuesSourceAggregationBuil
         return this;
     }
 
-    /** Set the minimum count of matching documents that buckets need to have
-     *  and return this builder so that calls can be chained. */
+    /**
+     * Set the minimum count of matching documents that buckets need to have
+     * and return this builder so that calls can be chained.
+     */
     public PathHierarchyAggregationBuilder minDocCount(long minDocCount) {
         if (minDocCount < 0) {
             throw new IllegalArgumentException(
@@ -245,9 +249,9 @@ public class PathHierarchyAggregationBuilder extends ValuesSourceAggregationBuil
     }
 
     @Override
-    protected ValuesSourceAggregatorFactory<ValuesSource> innerBuild(
+    protected ValuesSourceAggregatorFactory innerBuild(
             QueryShardContext context,
-            ValuesSourceConfig<ValuesSource> config,
+            ValuesSourceConfig config,
             AggregatorFactory parent,
             AggregatorFactories.Builder subFactoriesBuilder) throws IOException {
 
@@ -265,7 +269,12 @@ public class PathHierarchyAggregationBuilder extends ValuesSourceAggregationBuil
 
         return new PathHierarchyAggregatorFactory(
                 name, config, separator, minDepth, maxDepth, keepBlankPath, order, minDocCount, bucketCountThresholds,
-                context, parent, subFactoriesBuilder, metaData);
+                context, parent, subFactoriesBuilder, metadata);
+    }
+
+    @Override
+    public BucketCardinality bucketCardinality() {
+        return BucketCardinality.MANY;
     }
 
     @Override
