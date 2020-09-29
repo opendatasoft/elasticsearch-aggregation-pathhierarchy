@@ -18,6 +18,7 @@ public class PathHierarchyAggregation extends Plugin implements SearchPlugin {
                         PathHierarchyAggregationBuilder::new,
                         PathHierarchyAggregationBuilder.PARSER)
                         .addResultReader(InternalPathHierarchy::new)
+                        .setAggregatorRegistrar(PathHierarchyAggregationBuilder::registerAggregators)
         );
 /*
         r.add(

@@ -17,13 +17,17 @@ import org.elasticsearch.search.aggregations.InternalAggregation;
 import org.elasticsearch.search.aggregations.InternalOrder;
 import org.elasticsearch.search.aggregations.NonCollectingAggregator;
 import org.elasticsearch.search.aggregations.bucket.BucketUtils;
+import org.elasticsearch.search.aggregations.support.AggregatorSupplier;
+import org.elasticsearch.search.aggregations.support.CoreValuesSourceType;
 import org.elasticsearch.search.aggregations.support.ValuesSource;
 import org.elasticsearch.search.aggregations.support.ValuesSourceAggregatorFactory;
 import org.elasticsearch.search.aggregations.support.ValuesSourceConfig;
+import org.elasticsearch.search.aggregations.support.ValuesSourceRegistry;
 import org.elasticsearch.search.internal.SearchContext;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Map;
 
 /**
@@ -62,6 +66,15 @@ class PathHierarchyAggregatorFactory extends ValuesSourceAggregatorFactory {
         this.order = order;
         this.minDocCount = minDocCount;
         this.bucketCountThresholds = bucketCountThresholds;
+    }
+
+    static void registerAggregators(ValuesSourceRegistry.Builder builder) {
+        builder.register(PathHierarchyAggregationBuilder.NAME,
+                Collections.singletonList(CoreValuesSourceType.BYTES),
+                new AggregatorSupplier() {
+                    // Not using the supplier, it is not clear yet how it is used :/
+             }
+        );
     }
 
     @Override

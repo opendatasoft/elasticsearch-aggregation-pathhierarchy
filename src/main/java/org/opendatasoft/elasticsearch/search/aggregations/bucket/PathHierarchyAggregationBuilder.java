@@ -18,6 +18,7 @@ import org.elasticsearch.search.aggregations.support.CoreValuesSourceType;
 import org.elasticsearch.search.aggregations.support.ValuesSourceAggregationBuilder;
 import org.elasticsearch.search.aggregations.support.ValuesSourceAggregatorFactory;
 import org.elasticsearch.search.aggregations.support.ValuesSourceConfig;
+import org.elasticsearch.search.aggregations.support.ValuesSourceRegistry;
 import org.elasticsearch.search.aggregations.support.ValuesSourceType;
 
 import java.io.IOException;
@@ -63,6 +64,10 @@ public class PathHierarchyAggregationBuilder extends ValuesSourceAggregationBuil
 
     public static AggregationBuilder parse(String aggregationName, XContentParser parser) throws IOException {
         return PARSER.parse(parser, new PathHierarchyAggregationBuilder(aggregationName), null);
+    }
+
+    public static void registerAggregators(ValuesSourceRegistry.Builder builder) {
+        PathHierarchyAggregatorFactory.registerAggregators(builder);
     }
 
     private static final String DEFAULT_SEPARATOR = "/";
