@@ -255,6 +255,7 @@ public class PathHierarchyAggregator extends DeferableBucketAggregator {
     @Override
     public InternalAggregation[] buildAggregations(long[] owningBucketOrds) throws IOException {
 
+        InternalPathHierarchy.InternalBucket[][] topBucketsPerOrd = new InternalPathHierarchy.InternalBucket[owningBucketOrds.length][];
         InternalPathHierarchy[] results = new InternalPathHierarchy[owningBucketOrds.length];
 
         for (int ordIdx = 0; ordIdx < owningBucketOrds.length; ordIdx++) {
@@ -296,19 +297,23 @@ public class PathHierarchyAggregator extends DeferableBucketAggregator {
             }
 
             // Get the top buckets
-            final List<InternalPathHierarchy.InternalBucket> buckets = new ArrayList<>(size);
+            //final List<InternalPathHierarchy.InternalBucket> buckets = new ArrayList<>(size);
+            topBucketsPerOrd[ordIdx] = new InternalPathHierarchy.InternalBucket[size];
             long otherHierarchyNodes = pathSortedTree.getFullSize();
             Iterator<InternalPathHierarchy.InternalBucket> iterator = pathSortedTree.consumer();
             for (int i = 0; i < size; i++) {
                 final InternalPathHierarchy.InternalBucket bucket = iterator.next();
-                buckets.add(bucket);
+                topBucketsPerOrd[ordIdx][i] = bucket;
                 otherHierarchyNodes -= 1;
             }
 
-            results[ordIdx] = new InternalPathHierarchy(name, buckets, order, minDocCount, bucketCountThresholds.getRequiredSize(),
+            results[ordIdx] = new InternalPathHierarchy(name, Arrays.asList(topBucketsPerOrd[ordIdx]), order, minDocCount, bucketCountThresholds.getRequiredSize(),
                     bucketCountThresholds.getShardSize(), otherHierarchyNodes, separator, metadata());
 
         }
+
+        // Build sub-aggregations for pruned buckets
+        buildSubAggsForAllBuckets(topBucketsPerOrd, b -> b.bucketOrd, (b, aggregations) -> b.aggregations = aggregations);
 
         return results;
     }
