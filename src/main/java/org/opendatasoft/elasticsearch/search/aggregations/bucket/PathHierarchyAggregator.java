@@ -26,12 +26,10 @@ import org.elasticsearch.search.aggregations.support.ValuesSource;
 import org.elasticsearch.search.internal.SearchContext;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.Iterator;
-import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
@@ -168,7 +166,7 @@ public class PathHierarchyAggregator extends DeferableBucketAggregator {
         }
 
         // Don't defer any child agg if we are dependent on it for pruning results
-        if (order instanceof InternalOrder.Aggregation){
+        if (order instanceof InternalOrder.Aggregation) {
             AggregationPath path = ((InternalOrder.Aggregation) order).path();
             aggsUsedForSorting.add(path.resolveTopmostAggregator(this));
         } else if (order instanceof InternalOrder.CompoundOrder) {
@@ -210,7 +208,7 @@ public class PathHierarchyAggregator extends DeferableBucketAggregator {
     /**
      * The collector collects the docs, including or not some score (depending of the including of a Scorer) in the
      * collect() process.
-     *
+     * <p>
      * The LeafBucketCollector is a "Per-leaf bucket collector". It collects docs for the account of buckets.
      */
     @Override
@@ -221,6 +219,7 @@ public class PathHierarchyAggregator extends DeferableBucketAggregator {
         final SortedBinaryDocValues values = valuesSource.bytesValues(ctx);
         return new LeafBucketCollectorBase(sub, values) {
             final BytesRefBuilder previous = new BytesRefBuilder();
+
             /**
              * Collect the given doc in the given bucket.
              * Called once for every document matching a query, with the unbased document number.
@@ -240,7 +239,7 @@ public class PathHierarchyAggregator extends DeferableBucketAggregator {
                         }
                         long bucketOrdinal = bucketOrds.add(bytesValue);
                         if (bucketOrdinal < 0) { // already seen
-                            bucketOrdinal = - 1 - bucketOrdinal;
+                            bucketOrdinal = -1 - bucketOrdinal;
                             collectExistingBucket(sub, doc, bucketOrdinal);
                         } else {
                             collectBucket(sub, doc, bucketOrdinal);
@@ -275,9 +274,9 @@ public class PathHierarchyAggregator extends DeferableBucketAggregator {
 
                 String quotedPattern = Pattern.quote(separator.utf8ToString());
 
-                String [] paths = term.utf8ToString().split(quotedPattern, -1);
+                String[] paths = term.utf8ToString().split(quotedPattern, -1);
 
-                String [] pathsForTree;
+                String[] pathsForTree;
 
                 if (minDepth > 0) {
                     pathsForTree = Arrays.copyOfRange(paths, minDepth, paths.length);
@@ -307,13 +306,18 @@ public class PathHierarchyAggregator extends DeferableBucketAggregator {
                 otherHierarchyNodes -= 1;
             }
 
-            results[ordIdx] = new InternalPathHierarchy(name, Arrays.asList(topBucketsPerOrd[ordIdx]), order, minDocCount, bucketCountThresholds.getRequiredSize(),
-                    bucketCountThresholds.getShardSize(), otherHierarchyNodes, separator, metadata());
+            results[ordIdx] = new InternalPathHierarchy(name, Arrays.asList(topBucketsPerOrd[ordIdx]), order,
+                    minDocCount, bucketCountThresholds.getRequiredSize(), bucketCountThresholds.getShardSize(),
+                    otherHierarchyNodes, separator, metadata());
 
         }
 
         // Build sub-aggregations for pruned buckets
-        buildSubAggsForAllBuckets(topBucketsPerOrd, b -> b.bucketOrd, (b, aggregations) -> b.aggregations = aggregations);
+        buildSubAggsForAllBuckets(
+                topBucketsPerOrd,
+                b -> b.bucketOrd,
+                (b, aggregations) -> b.aggregations = aggregations
+        );
 
         return results;
     }
