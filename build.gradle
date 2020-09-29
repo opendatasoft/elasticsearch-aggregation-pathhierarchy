@@ -43,3 +43,5 @@ checkstyleTest.enabled = true
 dependencyLicenses.enabled = true
 
 thirdPartyAudit.enabled = true
+
+validateNebulaPom.enabled = false
