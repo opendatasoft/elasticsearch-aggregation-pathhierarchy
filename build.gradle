@@ -16,11 +16,31 @@ version = "${plugin_version}"
 apply plugin: 'java'
 apply plugin: 'idea'
 apply plugin: 'elasticsearch.esplugin'
+apply plugin: 'elasticsearch.yaml-rest-test'
 
 // license of this project
 licenseFile = rootProject.file('LICENSE')
 noticeFile = rootProject.file('README.md')
 
+publishing {
+    publications {
+        // add license information to generated poms
+        all {
+            pom.withXml { XmlProvider xml ->
+                Node node = xml.asNode()
+
+                Node license = node.appendNode('licenses').appendNode('license')
+                license.appendNode('name', 'The MIT License (MIT)')
+                license.appendNode('url', './LICENSE')
+                license.appendNode('distribution', 'repo')
+
+                Node developer = node.appendNode('developers').appendNode('developer')
+                developer.appendNode('name', 'Opendatasoft')
+                developer.appendNode('url', 'https://www.opendatasoft.com/')
+            }
+        }
+    }
+}
 
 esplugin {
     name 'pathhierarchy-aggregation'
@@ -31,7 +51,9 @@ esplugin {
 }
 
 dependencies {
-    compile "org.elasticsearch:elasticsearch:${es_version}"
+    implementation "org.elasticsearch:elasticsearch:${es_version}"
+    //FIXME: Yaml rest test won't run without this in 7.9.0
+    yamlRestTestImplementation "org.apache.logging.log4j:log4j-core:${versions.log4j}"
 }
 
 // Skip license headers check
@@ -44,4 +66,5 @@ dependencyLicenses.enabled = true
 
 thirdPartyAudit.enabled = true
 
-validateNebulaPom.enabled = false
+//FIXME: This task should be removed in elastic, disabling until is done.
+integTest.enabled = false
