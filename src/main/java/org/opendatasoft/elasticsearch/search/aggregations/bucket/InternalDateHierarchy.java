@@ -11,9 +11,7 @@ import org.elasticsearch.search.aggregations.InternalAggregations;
 import org.elasticsearch.search.aggregations.InternalMultiBucketAggregation;
 import org.elasticsearch.search.aggregations.InternalOrder;
 import org.elasticsearch.search.aggregations.KeyComparable;
-import org.elasticsearch.search.aggregations.bucket.MultiBucketAggregationBuilder;
 import org.elasticsearch.search.aggregations.bucket.MultiBucketsAggregation;
-import org.elasticsearch.search.aggregations.pipeline.PipelineAggregator;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -29,17 +27,18 @@ import java.util.Objects;
  * Mainly, returns the builder and makes the reduce of buckets.
  */
 public class InternalDateHierarchy extends InternalMultiBucketAggregation<InternalDateHierarchy,
-        InternalDateHierarchy.InternalBucket> implements MultiBucketAggregationBuilder {
+        InternalDateHierarchy.InternalBucket> {
 
     /**
      * The bucket class of InternalDateHierarchy.
+     *
      * @see MultiBucketsAggregation.Bucket
      */
-    public static class InternalBucket extends InternalMultiBucketAggregation.InternalBucket implements
-            MultiBucketsAggregation.Bucket, KeyComparable<InternalBucket> {
+    public static class InternalBucket extends InternalMultiBucketAggregation.InternalBucket implements KeyComparable<InternalBucket> {
 
         BytesRef key;
         String name;
+        long bucketOrd;
         protected String[] paths;
         protected long docCount;
         protected InternalAggregations aggregations;
@@ -61,11 +60,11 @@ public class InternalDateHierarchy extends InternalMultiBucketAggregation<Intern
             key = in.readBytesRef();
             name = in.readString();
             docCount = in.readLong();
-            aggregations = new InternalAggregations(in);
+            aggregations = InternalAggregations.readFrom(in);
             level = in.readInt();
             int pathsSize = in.readInt();
             paths = new String[pathsSize];
-            for (int i=0; i < pathsSize; i++) {
+            for (int i = 0; i < pathsSize; i++) {
                 paths[i] = in.readString();
             }
         }
@@ -81,7 +80,7 @@ public class InternalDateHierarchy extends InternalMultiBucketAggregation<Intern
             aggregations.writeTo(out);
             out.writeInt(level);
             out.writeInt(paths.length);
-            for (String path: paths) {
+            for (String path : paths) {
                 out.writeString(path);
             }
         }
@@ -137,10 +136,9 @@ public class InternalDateHierarchy extends InternalMultiBucketAggregation<Intern
             int requiredSize,
             int shardSize,
             long otherHierarchyNodes,
-            List<PipelineAggregator> pipelineAggregators,
-            Map<String, Object> metaData
+            Map<String, Object> metadata
     ) {
-        super(name, pipelineAggregators, metaData);
+        super(name, metadata);
         this.buckets = buckets;
         this.order = order;
         this.minDocCount = minDocCount;
@@ -161,7 +159,7 @@ public class InternalDateHierarchy extends InternalMultiBucketAggregation<Intern
         otherHierarchyNodes = in.readVLong();
         int bucketsSize = in.readInt();
         this.buckets = new ArrayList<>(bucketsSize);
-        for (int i=0; i<bucketsSize; i++) {
+        for (int i = 0; i < bucketsSize; i++) {
             this.buckets.add(new InternalBucket(in));
         }
     }
@@ -177,7 +175,7 @@ public class InternalDateHierarchy extends InternalMultiBucketAggregation<Intern
         writeSize(shardSize, out);
         out.writeVLong(otherHierarchyNodes);
         out.writeInt(buckets.size());
-        for (InternalBucket bucket: buckets) {
+        for (InternalBucket bucket : buckets) {
             bucket.writeTo(out);
         }
     }
@@ -198,8 +196,8 @@ public class InternalDateHierarchy extends InternalMultiBucketAggregation<Intern
     @Override
     public InternalDateHierarchy create(List<InternalBucket> buckets) {
         return new InternalDateHierarchy(
-                this.name, buckets, order, minDocCount, requiredSize, shardSize, otherHierarchyNodes,
-                this.pipelineAggregators(), this.metaData);
+                this.name, buckets, order, minDocCount, requiredSize,
+                shardSize, otherHierarchyNodes, this.metadata);
     }
 
     @Override
@@ -241,7 +239,7 @@ public class InternalDateHierarchy extends InternalMultiBucketAggregation<Intern
 
         // reduce and sort buckets depending of ordering rules
         final int size = !reduceContext.isFinalReduce() ? buckets.size() : Math.min(requiredSize, buckets.size());
-        PathSortedTree<String, InternalBucket> ordered = new PathSortedTree<>(order.comparator(null), size);
+        PathSortedTree<String, InternalBucket> ordered = new PathSortedTree<>(order.comparator(), size);
         for (List<InternalBucket> sameTermBuckets : buckets.values()) {
 
             final InternalBucket b = reduceBucket(sameTermBuckets, reduceContext);
@@ -255,7 +253,7 @@ public class InternalDateHierarchy extends InternalMultiBucketAggregation<Intern
 
         long sum_other_hierarchy_nodes = ordered.getFullSize() - size + otherHierarchyNodes;
         return new InternalDateHierarchy(getName(), ordered.getAsList(), order, minDocCount, requiredSize, shardSize,
-                sum_other_hierarchy_nodes, pipelineAggregators(), getMetaData());
+                sum_other_hierarchy_nodes, getMetadata());
     }
 
     @Override
@@ -308,7 +306,7 @@ public class InternalDateHierarchy extends InternalMultiBucketAggregation<Intern
         }
 
         if (currentBucket != null) {
-            for (int i=0; i < currentBucket.level; i++) {
+            for (int i = 0; i < currentBucket.level; i++) {
                 builder.endObject();
                 builder.endArray();
                 builder.endObject();

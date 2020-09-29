@@ -2,6 +2,8 @@ package org.opendatasoft.elasticsearch.plugin;
 
 import org.elasticsearch.plugins.Plugin;
 import org.elasticsearch.plugins.SearchPlugin;
+import org.opendatasoft.elasticsearch.search.aggregations.bucket.DateHierarchyAggregationBuilder;
+import org.opendatasoft.elasticsearch.search.aggregations.bucket.InternalDateHierarchy;
 import org.opendatasoft.elasticsearch.search.aggregations.bucket.InternalPathHierarchy;
 import org.opendatasoft.elasticsearch.search.aggregations.bucket.PathHierarchyAggregationBuilder;
 
@@ -20,15 +22,14 @@ public class PathHierarchyAggregation extends Plugin implements SearchPlugin {
                         .addResultReader(InternalPathHierarchy::new)
                         .setAggregatorRegistrar(PathHierarchyAggregationBuilder::registerAggregators)
         );
-/*
         r.add(
                 new AggregationSpec(
                         DateHierarchyAggregationBuilder.NAME,
                         DateHierarchyAggregationBuilder::new,
                         DateHierarchyAggregationBuilder.PARSER)
                         .addResultReader(InternalDateHierarchy::new)
+                        .setAggregatorRegistrar(DateHierarchyAggregationBuilder::registerAggregators)
         );
-*/
         return r;
     }
 }

@@ -81,8 +81,7 @@ class PathHierarchyAggregatorFactory extends ValuesSourceAggregatorFactory {
     protected Aggregator createUnmapped(
             SearchContext searchContext,
             Aggregator parent,
-            Map<String,
-                    Object> metadata) throws IOException {
+            Map<String, Object> metadata) throws IOException {
         final InternalAggregation aggregation = new InternalPathHierarchy(name, new ArrayList<>(), order, minDocCount,
                 bucketCountThresholds.getRequiredSize(), bucketCountThresholds.getShardSize(), 0, separator, metadata);
         return new NonCollectingAggregator(name, searchContext, parent, factories, metadata) {

@@ -16,23 +16,18 @@ import org.elasticsearch.search.aggregations.Aggregator;
 import org.elasticsearch.search.aggregations.AggregatorFactories;
 import org.elasticsearch.search.aggregations.BucketOrder;
 import org.elasticsearch.search.aggregations.InternalAggregation;
-import org.elasticsearch.search.aggregations.InternalOrder;
 import org.elasticsearch.search.aggregations.LeafBucketCollector;
 import org.elasticsearch.search.aggregations.LeafBucketCollectorBase;
 import org.elasticsearch.search.aggregations.bucket.DeferableBucketAggregator;
-import org.elasticsearch.search.aggregations.bucket.nested.NestedAggregator;
-import org.elasticsearch.search.aggregations.support.AggregationPath;
 import org.elasticsearch.search.aggregations.support.ValuesSource;
 import org.elasticsearch.search.internal.SearchContext;
 
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Comparator;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Set;
 import java.util.regex.Pattern;
 
 public class PathHierarchyAggregator extends DeferableBucketAggregator {
@@ -128,8 +123,7 @@ public class PathHierarchyAggregator extends DeferableBucketAggregator {
     private final BucketCountThresholds bucketCountThresholds;
     private final BytesRef separator;
     protected final Comparator<InternalPathHierarchy.InternalBucket> partiallyBuiltBucketComparator;
-    protected final Set<Aggregator> aggsUsedForSorting = new HashSet<>();
-    protected final SubAggCollectionMode collectMode;
+    protected final OrderBasedAggregatorDeferrer deferrer;
 
     public PathHierarchyAggregator(
             String name,
@@ -152,57 +146,13 @@ public class PathHierarchyAggregator extends DeferableBucketAggregator {
         this.bucketCountThresholds = bucketCountThresholds;
         this.minDepth = minDepth;
         this.order = order;
-        partiallyBuiltBucketComparator = order == null ? null : order.partiallyBuiltBucketComparator(b -> b.bucketOrd, this);
-
-        if (subAggsNeedScore() && descendsFromNestedAggregator(parent)) {
-            /**
-             * Force the execution to depth_first because we need to access the score of
-             * nested documents in a sub-aggregation and we are not able to generate this score
-             * while replaying deferred documents.
-             */
-            this.collectMode = SubAggCollectionMode.DEPTH_FIRST;
-        } else {
-            this.collectMode = SubAggCollectionMode.BREADTH_FIRST;
-        }
-
-        // Don't defer any child agg if we are dependent on it for pruning results
-        if (order instanceof InternalOrder.Aggregation) {
-            AggregationPath path = ((InternalOrder.Aggregation) order).path();
-            aggsUsedForSorting.add(path.resolveTopmostAggregator(this));
-        } else if (order instanceof InternalOrder.CompoundOrder) {
-            InternalOrder.CompoundOrder compoundOrder = (InternalOrder.CompoundOrder) order;
-            for (BucketOrder orderElement : compoundOrder.orderElements()) {
-                if (orderElement instanceof InternalOrder.Aggregation) {
-                    AggregationPath path = ((InternalOrder.Aggregation) orderElement).path();
-                    aggsUsedForSorting.add(path.resolveTopmostAggregator(this));
-                }
-            }
-        }
-    }
-
-    static boolean descendsFromNestedAggregator(Aggregator parent) {
-        while (parent != null) {
-            if (parent.getClass() == NestedAggregator.class) {
-                return true;
-            }
-            parent = parent.parent();
-        }
-        return false;
-    }
-
-    private boolean subAggsNeedScore() {
-        for (Aggregator subAgg : subAggregators) {
-            if (subAgg.scoreMode().needsScores()) {
-                return true;
-            }
-        }
-        return false;
+        this.partiallyBuiltBucketComparator = order == null ? null : order.partiallyBuiltBucketComparator(b -> b.bucketOrd, this);
+        this.deferrer = new OrderBasedAggregatorDeferrer(this, subAggregators, order);
     }
 
     @Override
     protected boolean shouldDefer(Aggregator aggregator) {
-        return collectMode == SubAggCollectionMode.BREADTH_FIRST
-                && !aggsUsedForSorting.contains(aggregator);
+        return deferrer.shouldDefer(aggregator);
     }
 
     /**
@@ -296,7 +246,6 @@ public class PathHierarchyAggregator extends DeferableBucketAggregator {
             }
 
             // Get the top buckets
-            //final List<InternalPathHierarchy.InternalBucket> buckets = new ArrayList<>(size);
             topBucketsPerOrd[ordIdx] = new InternalPathHierarchy.InternalBucket[size];
             long otherHierarchyNodes = pathSortedTree.getFullSize();
             Iterator<InternalPathHierarchy.InternalBucket> iterator = pathSortedTree.consumer();
