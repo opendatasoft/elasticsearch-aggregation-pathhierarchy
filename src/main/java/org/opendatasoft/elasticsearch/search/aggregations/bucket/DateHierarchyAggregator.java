@@ -19,7 +19,6 @@ import org.elasticsearch.search.aggregations.InternalOrder;
 import org.elasticsearch.search.aggregations.LeafBucketCollector;
 import org.elasticsearch.search.aggregations.LeafBucketCollectorBase;
 import org.elasticsearch.search.aggregations.bucket.BucketsAggregator;
-import org.elasticsearch.search.aggregations.pipeline.PipelineAggregator;
 import org.elasticsearch.search.aggregations.support.ValuesSource;
 import org.elasticsearch.search.internal.SearchContext;
 
@@ -132,10 +131,9 @@ public class DateHierarchyAggregator extends BucketsAggregator {
             BucketCountThresholds bucketCountThresholds,
             List<DateHierarchyAggregationBuilder.RoundingInfo> roundingsInfo,
             Aggregator parent,
-            List<PipelineAggregator> pipelineAggregators,
-            Map<String, Object> metaData
+            Map<String, Object> metadata
     ) throws IOException {
-        super(name, factories, context, parent, pipelineAggregators, metaData);
+        super(name, factories, context, parent, metadata);
         this.valuesSource = valuesSource;
         this.roundingsInfo = roundingsInfo;
         this.minDocCount = minDocCount;
@@ -228,13 +226,13 @@ public class DateHierarchyAggregator extends BucketsAggregator {
         }
 
         return new InternalDateHierarchy(name, list, order, minDocCount, bucketCountThresholds.getRequiredSize(),
-                bucketCountThresholds.getShardSize(), otherHierarchyNodes, pipelineAggregators(), metaData());
+                bucketCountThresholds.getShardSize(), otherHierarchyNodes, metadata());
     }
 
     @Override
     public InternalAggregation buildEmptyAggregation() {
         return new InternalDateHierarchy(name, null, order, minDocCount, bucketCountThresholds.getRequiredSize(),
-                bucketCountThresholds.getShardSize(), 0, pipelineAggregators(), metaData());
+                bucketCountThresholds.getShardSize(), 0, metadata());
     }
 
     @Override

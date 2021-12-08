@@ -8,15 +8,8 @@ import org.apache.lucene.util.FutureArrays;
 import org.elasticsearch.index.fielddata.SortedBinaryDocValues;
 import org.elasticsearch.index.fielddata.SortingBinaryDocValues;
 import org.elasticsearch.index.query.QueryShardContext;
-import org.elasticsearch.search.aggregations.Aggregator;
-import org.elasticsearch.search.aggregations.BucketOrder;
-import org.elasticsearch.search.aggregations.InternalOrder;
-import org.elasticsearch.search.aggregations.AggregatorFactories;
-import org.elasticsearch.search.aggregations.AggregatorFactory;
-import org.elasticsearch.search.aggregations.InternalAggregation;
-import org.elasticsearch.search.aggregations.NonCollectingAggregator;
+import org.elasticsearch.search.aggregations.*;
 import org.elasticsearch.search.aggregations.bucket.BucketUtils;
-import org.elasticsearch.search.aggregations.pipeline.PipelineAggregator;
 import org.elasticsearch.search.aggregations.support.ValuesSource;
 import org.elasticsearch.search.aggregations.support.ValuesSourceAggregatorFactory;
 import org.elasticsearch.search.aggregations.support.ValuesSourceConfig;
@@ -24,14 +17,13 @@ import org.elasticsearch.search.internal.SearchContext;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.List;
 import java.util.Map;
 
 /**
  * The factory of aggregators.
  * ValuesSourceAggregatorFactory extends {@link AggregatorFactory}
  */
-class PathHierarchyAggregatorFactory extends ValuesSourceAggregatorFactory<ValuesSource> {
+class PathHierarchyAggregatorFactory extends ValuesSourceAggregatorFactory {
 
     private BytesRef separator;
     private int minDepth;
@@ -42,7 +34,7 @@ class PathHierarchyAggregatorFactory extends ValuesSourceAggregatorFactory<Value
     private final PathHierarchyAggregator.BucketCountThresholds bucketCountThresholds;
 
     PathHierarchyAggregatorFactory(String name,
-                                   ValuesSourceConfig<ValuesSource> config,
+                                   ValuesSourceConfig config,
                                    String separator,
                                    int minDepth,
                                    int maxDepth,
@@ -66,19 +58,16 @@ class PathHierarchyAggregatorFactory extends ValuesSourceAggregatorFactory<Value
     }
 
     @Override
-    protected Aggregator createUnmapped(
-            SearchContext searchContext,
-            Aggregator parent,
-            List<PipelineAggregator> pipelineAggregators,
-            Map<String,
-            Object> metaData) throws IOException {
+    protected Aggregator createUnmapped(SearchContext searchContext,
+                                        Aggregator parent,
+                                        Map<String, Object> metadata) throws IOException {
         final InternalAggregation aggregation = new InternalPathHierarchy(name, new ArrayList<>(), order, minDocCount,
-                bucketCountThresholds.getRequiredSize(), bucketCountThresholds.getShardSize(), 0, separator, pipelineAggregators, metaData);
-        return new NonCollectingAggregator(name, searchContext, parent, factories, pipelineAggregators, metaData) {
+                bucketCountThresholds.getRequiredSize(), bucketCountThresholds.getShardSize(), 0, separator, metadata);
+        return new NonCollectingAggregator(name, searchContext, parent, factories, metadata) {
             {
                 // even in the case of an unmapped aggregator, validate the
                 // order
-                InternalOrder.validate(order, this);
+                order.validate(this);
             }
 
             @Override
@@ -87,12 +76,7 @@ class PathHierarchyAggregatorFactory extends ValuesSourceAggregatorFactory<Value
     }
 
     @Override
-    protected Aggregator doCreateInternal(
-            ValuesSource valuesSource, SearchContext searchContext, Aggregator parent,
-            boolean collectsFromSingleBucket, List<PipelineAggregator> pipelineAggregators,
-            Map<String, Object> metaData) throws IOException {
-
-        ValuesSource valuesSourceBytes = new HierarchyValuesSource(valuesSource, separator, minDepth, maxDepth, keepBlankPath);
+    protected Aggregator doCreateInternal(SearchContext searchContext, Aggregator parent, CardinalityUpperBound cardinality, Map<String, Object> metadata) throws IOException {
         PathHierarchyAggregator.BucketCountThresholds bucketCountThresholds = new
                 PathHierarchyAggregator.BucketCountThresholds(this.bucketCountThresholds);
         if (!InternalOrder.isKeyOrder(order)
@@ -103,10 +87,23 @@ class PathHierarchyAggregatorFactory extends ValuesSourceAggregatorFactory<Value
             bucketCountThresholds.setShardSize(BucketUtils.suggestShardSideQueueSize(bucketCountThresholds.getRequiredSize()));
         }
         bucketCountThresholds.ensureValidity();
-        return new PathHierarchyAggregator(
-                name, factories, searchContext,
-                valuesSourceBytes, order, minDocCount, bucketCountThresholds, separator, minDepth,
-                parent, pipelineAggregators, metaData);
+        return queryShardContext.getValuesSourceRegistry()
+                .getAggregator(PathHierarchyAggregationBuilder.REGISTRY_KEY, config)
+                .build(name,
+                        factories,
+                        separator,
+                        minDepth,
+                        maxDepth,
+                        keepBlankPath,
+                        order,
+                        minDocCount,
+                        bucketCountThresholds,
+                        config,
+                        searchContext,
+                        parent,
+                        cardinality,
+                        metadata
+                );
     }
 
     /**

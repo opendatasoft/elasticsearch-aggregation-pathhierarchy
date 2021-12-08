@@ -3,6 +3,7 @@ package org.opendatasoft.elasticsearch.search.aggregations.bucket;
 import org.elasticsearch.search.aggregations.Aggregator;
 import org.elasticsearch.search.aggregations.AggregatorFactories;
 import org.elasticsearch.search.aggregations.BucketOrder;
+import org.elasticsearch.search.aggregations.CardinalityUpperBound;
 import org.elasticsearch.search.aggregations.support.ValuesSourceConfig;
 import org.elasticsearch.search.internal.SearchContext;
 
@@ -14,7 +15,6 @@ import java.util.Map;
 public interface DateHierarchyAggregationSupplier {
     Aggregator build(String name,
                      AggregatorFactories factories,
-                     String separator,
                      BucketOrder order,
                      List<DateHierarchyAggregationBuilder.RoundingInfo> roundingsInfo,
                      long minDocCount,
@@ -22,5 +22,6 @@ public interface DateHierarchyAggregationSupplier {
                      ValuesSourceConfig valuesSourceConfig,
                      SearchContext aggregationContext,
                      Aggregator parent,
+                     CardinalityUpperBound cardinality,
                      Map<String, Object> metadata) throws IOException;
 }

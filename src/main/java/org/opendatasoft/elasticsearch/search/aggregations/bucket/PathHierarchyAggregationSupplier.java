@@ -1,8 +1,10 @@
 package org.opendatasoft.elasticsearch.search.aggregations.bucket;
 
+import org.apache.lucene.util.BytesRef;
 import org.elasticsearch.search.aggregations.Aggregator;
 import org.elasticsearch.search.aggregations.AggregatorFactories;
 import org.elasticsearch.search.aggregations.BucketOrder;
+import org.elasticsearch.search.aggregations.CardinalityUpperBound;
 import org.elasticsearch.search.aggregations.support.ValuesSourceConfig;
 import org.elasticsearch.search.internal.SearchContext;
 
@@ -13,7 +15,7 @@ import java.util.Map;
 public interface PathHierarchyAggregationSupplier {
     Aggregator build(String name,
                      AggregatorFactories factories,
-                     String separator,
+                     BytesRef separator,
                      int minDepth,
                      int maxDepth,
                      boolean keepBlankPath,
@@ -23,5 +25,6 @@ public interface PathHierarchyAggregationSupplier {
                      ValuesSourceConfig valuesSourceConfig,
                      SearchContext aggregationContext,
                      Aggregator parent,
+                     CardinalityUpperBound cardinality,
                      Map<String, Object> metadata) throws IOException;
 }

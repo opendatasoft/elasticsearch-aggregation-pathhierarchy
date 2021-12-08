@@ -20,7 +20,6 @@ import org.elasticsearch.search.aggregations.InternalAggregation;
 import org.elasticsearch.search.aggregations.LeafBucketCollector;
 import org.elasticsearch.search.aggregations.LeafBucketCollectorBase;
 import org.elasticsearch.search.aggregations.bucket.BucketsAggregator;
-import org.elasticsearch.search.aggregations.pipeline.PipelineAggregator;
 import org.elasticsearch.search.aggregations.support.ValuesSource;
 import org.elasticsearch.search.internal.SearchContext;
 
@@ -137,10 +136,9 @@ public class PathHierarchyAggregator extends BucketsAggregator {
             BytesRef separator,
             int minDepth,
             Aggregator parent,
-            List<PipelineAggregator> pipelineAggregators,
-            Map<String, Object> metaData
+            Map<String, Object> metadata
     ) throws IOException {
-        super(name, factories, context, parent, pipelineAggregators, metaData);
+        super(name, factories, context, parent, metadata);
         this.valuesSource = valuesSource;
         this.separator = separator;
         this.minDocCount = minDocCount;
@@ -247,13 +245,13 @@ public class PathHierarchyAggregator extends BucketsAggregator {
         }
 
         return new InternalPathHierarchy(name, list, order, minDocCount, bucketCountThresholds.getRequiredSize(),
-                bucketCountThresholds.getShardSize(), otherHierarchyNodes, separator, pipelineAggregators(), metaData());
+                bucketCountThresholds.getShardSize(), otherHierarchyNodes, separator, metadata());
     }
 
     @Override
     public InternalAggregation buildEmptyAggregation() {
         return new InternalPathHierarchy(name, null, order, minDocCount, bucketCountThresholds.getRequiredSize(),
-                bucketCountThresholds.getShardSize(), 0, separator, pipelineAggregators(), metaData());
+                bucketCountThresholds.getShardSize(), 0, separator, metadata());
     }
 
     @Override
