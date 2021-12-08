@@ -122,6 +122,11 @@ public class PathHierarchyAggregationBuilder extends ValuesSourceAggregationBuil
         return new PathHierarchyAggregationBuilder(this, factoriesBuilder, metaData);
     }
 
+    @Override
+    protected ValuesSourceType defaultValueSourceType() {
+        return CoreValuesSourceType.BYTES;
+    }
+
     /**
      * Write to a stream
      */

@@ -185,6 +185,11 @@ public class DateHierarchyAggregationBuilder extends ValuesSourceAggregationBuil
         return new DateHierarchyAggregationBuilder(this, factoriesBuilder, metaData);
     }
 
+    @Override
+    protected ValuesSourceType defaultValueSourceType() {
+        return CoreValuesSourceType.DATE;
+    }
+
     /**
      * Write to a stream
      */
