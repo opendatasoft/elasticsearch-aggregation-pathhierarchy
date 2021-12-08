@@ -304,6 +304,10 @@ public class DateHierarchyAggregationBuilder extends ValuesSourceAggregationBuil
         return bucketCountThresholds.getRequiredSize();
     }
 
+    @Override
+    public BucketCardinality bucketCardinality() {
+        return BucketCardinality.MANY;
+    }
 
     /**
      * Sets the shard_size - indicating the number of term buckets each shard
