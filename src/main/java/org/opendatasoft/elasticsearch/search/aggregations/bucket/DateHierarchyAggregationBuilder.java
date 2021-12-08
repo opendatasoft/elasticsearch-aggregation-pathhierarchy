@@ -349,7 +349,7 @@ public class DateHierarchyAggregationBuilder extends ValuesSourceAggregationBuil
                 context,
                 parent,
                 subFactoriesBuilder,
-                metaData);
+                metadata);
     }
 
     @Override

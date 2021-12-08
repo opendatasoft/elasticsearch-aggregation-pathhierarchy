@@ -279,7 +279,7 @@ public class PathHierarchyAggregationBuilder extends ValuesSourceAggregationBuil
                 context,
                 parent,
                 subFactoriesBuilder,
-                metaData);
+                metadata);
     }
 
     @Override
