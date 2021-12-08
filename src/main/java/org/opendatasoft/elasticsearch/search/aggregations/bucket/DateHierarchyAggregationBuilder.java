@@ -19,7 +19,6 @@ import org.elasticsearch.search.aggregations.AggregatorFactory;
 import org.elasticsearch.search.aggregations.BucketOrder;
 import org.elasticsearch.search.aggregations.InternalOrder;
 import org.elasticsearch.search.aggregations.support.*;
-import org.elasticsearch.search.aggregations.support.ValuesSourceParserHelper;
 
 import java.io.IOException;
 import java.time.ZoneId;
@@ -119,7 +118,7 @@ public class DateHierarchyAggregationBuilder extends ValuesSourceAggregationBuil
     static {
 
         PARSER = new ObjectParser<>(DateHierarchyAggregationBuilder.NAME);
-        ValuesSourceParserHelper.declareNumericFields(PARSER, true, true, true);
+        ValuesSourceAggregationBuilder.declareFields(PARSER, true, true, true);
 
         PARSER.declareString(DateHierarchyAggregationBuilder::interval, INTERVAL_FIELD);
 
@@ -139,7 +138,7 @@ public class DateHierarchyAggregationBuilder extends ValuesSourceAggregationBuil
     }
 
     public static AggregationBuilder parse(String aggregationName, XContentParser parser) throws IOException {
-        return PARSER.parse(parser, new DateHierarchyAggregationBuilder(aggregationName, null), null);
+        return PARSER.parse(parser, new DateHierarchyAggregationBuilder(aggregationName), null);
     }
 
     private long minDocCount = 0;
@@ -150,8 +149,8 @@ public class DateHierarchyAggregationBuilder extends ValuesSourceAggregationBuil
             DEFAULT_BUCKET_COUNT_THRESHOLDS);
 
 
-    private DateHierarchyAggregationBuilder(String name, ValueType valueType) {
-        super(name, CoreValuesSourceType.ANY, valueType);
+    private DateHierarchyAggregationBuilder(String name) {
+        super(name);
     }
 
     @Override
@@ -164,7 +163,7 @@ public class DateHierarchyAggregationBuilder extends ValuesSourceAggregationBuil
      *
      */
     public DateHierarchyAggregationBuilder(StreamInput in) throws IOException {
-        super(in, CoreValuesSourceType.ANY);
+        super(in);
         bucketCountThresholds = new DateHierarchyAggregator.BucketCountThresholds(in);
         minDocCount = in.readVLong();
         interval = in.readString();

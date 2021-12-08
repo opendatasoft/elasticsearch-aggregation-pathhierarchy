@@ -15,7 +15,6 @@ import org.elasticsearch.search.aggregations.AggregatorFactories.Builder;
 import org.elasticsearch.search.aggregations.BucketOrder;
 import org.elasticsearch.search.aggregations.InternalOrder;
 import org.elasticsearch.search.aggregations.support.*;
-import org.elasticsearch.search.aggregations.support.ValuesSourceParserHelper;
 
 import java.io.IOException;
 import java.util.List;
@@ -46,7 +45,7 @@ public class PathHierarchyAggregationBuilder extends ValuesSourceAggregationBuil
     private static final ObjectParser<PathHierarchyAggregationBuilder, Void> PARSER;
     static {
         PARSER = new ObjectParser<>(PathHierarchyAggregationBuilder.NAME);
-        ValuesSourceParserHelper.declareAnyFields(PARSER, true, true);
+        ValuesSourceAggregationBuilder.declareFields(PARSER, true, true, false);
 
         PARSER.declareString(PathHierarchyAggregationBuilder::separator, SEPARATOR_FIELD);
         PARSER.declareInt(PathHierarchyAggregationBuilder::minDepth, MIN_DEPTH_FIELD);
@@ -61,7 +60,7 @@ public class PathHierarchyAggregationBuilder extends ValuesSourceAggregationBuil
     }
 
     public static AggregationBuilder parse(String aggregationName, XContentParser parser) throws IOException {
-        return PARSER.parse(parser, new PathHierarchyAggregationBuilder(aggregationName, null), null);
+        return PARSER.parse(parser, new PathHierarchyAggregationBuilder(aggregationName), null);
     }
 
     private static final String DEFAULT_SEPARATOR = "/";
@@ -79,8 +78,8 @@ public class PathHierarchyAggregationBuilder extends ValuesSourceAggregationBuil
             DEFAULT_BUCKET_COUNT_THRESHOLDS);
 
 
-    private PathHierarchyAggregationBuilder(String name, ValueType valueType) {
-        super(name, CoreValuesSourceType.ANY, valueType);
+    private PathHierarchyAggregationBuilder(String name) {
+        super(name);
     }
 
     @Override
@@ -93,7 +92,7 @@ public class PathHierarchyAggregationBuilder extends ValuesSourceAggregationBuil
      *
      */
     public PathHierarchyAggregationBuilder(StreamInput in) throws IOException {
-        super(in, CoreValuesSourceType.ANY);
+        super(in);
         bucketCountThresholds = new PathHierarchyAggregator.BucketCountThresholds(in);
         separator = in.readString();
         minDocCount = in.readVLong();
