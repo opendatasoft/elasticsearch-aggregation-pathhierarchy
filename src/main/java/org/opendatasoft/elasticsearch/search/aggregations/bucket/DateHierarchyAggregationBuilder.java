@@ -328,17 +328,25 @@ public class DateHierarchyAggregationBuilder extends ValuesSourceAggregationBuil
     }
 
     @Override
-    protected ValuesSourceAggregatorFactory<ValuesSource.Numeric> innerBuild(
-            QueryShardContext context,
-            ValuesSourceConfig<ValuesSource.Numeric> config,
-            AggregatorFactory parent,
-            Builder subFactoriesBuilder) throws IOException {
+    protected ValuesSourceAggregatorFactory innerBuild(QueryShardContext context,
+                                                       ValuesSourceConfig config,
+                                                       AggregatorFactory parent,
+                                                       Builder subFactoriesBuilder) throws IOException {
+
 
         final List<RoundingInfo> roundingsInfo = buildRoundings();
 
         return new DateHierarchyAggregatorFactory(
-                name, config, order, roundingsInfo, minDocCount, bucketCountThresholds,
-                context, parent, subFactoriesBuilder, metaData);
+                name,
+                config,
+                order,
+                roundingsInfo,
+                minDocCount,
+                bucketCountThresholds,
+                context,
+                parent,
+                subFactoriesBuilder,
+                metaData);
     }
 
     @Override

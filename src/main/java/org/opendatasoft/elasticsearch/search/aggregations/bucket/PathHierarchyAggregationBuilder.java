@@ -245,11 +245,11 @@ public class PathHierarchyAggregationBuilder extends ValuesSourceAggregationBuil
     }
 
     @Override
-    protected ValuesSourceAggregatorFactory<ValuesSource> innerBuild(
-            QueryShardContext context,
-            ValuesSourceConfig<ValuesSource> config,
-            AggregatorFactory parent,
-            AggregatorFactories.Builder subFactoriesBuilder) throws IOException {
+    protected ValuesSourceAggregatorFactory innerBuild(QueryShardContext context,
+                                                       ValuesSourceConfig config,
+                                                       AggregatorFactory parent,
+                                                       AggregatorFactories.Builder subFactoriesBuilder) throws IOException {
+
 
         if (minDepth > maxDepth)
             throw new IllegalArgumentException("[minDepth] (" + minDepth + ") must not be greater than [maxDepth] (" +
@@ -264,8 +264,19 @@ public class PathHierarchyAggregationBuilder extends ValuesSourceAggregationBuil
         }
 
         return new PathHierarchyAggregatorFactory(
-                name, config, separator, minDepth, maxDepth, keepBlankPath, order, minDocCount, bucketCountThresholds,
-                context, parent, subFactoriesBuilder, metaData);
+                name,
+                config,
+                separator,
+                minDepth,
+                maxDepth,
+                keepBlankPath,
+                order,
+                minDocCount,
+                bucketCountThresholds,
+                context,
+                parent,
+                subFactoriesBuilder,
+                metaData);
     }
 
     @Override
