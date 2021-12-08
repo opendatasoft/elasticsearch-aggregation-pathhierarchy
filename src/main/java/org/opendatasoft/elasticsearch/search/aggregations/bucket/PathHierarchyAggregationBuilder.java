@@ -14,7 +14,6 @@ import org.elasticsearch.search.aggregations.AggregatorFactory;
 import org.elasticsearch.search.aggregations.AggregatorFactories.Builder;
 import org.elasticsearch.search.aggregations.BucketOrder;
 import org.elasticsearch.search.aggregations.InternalOrder;
-import org.elasticsearch.search.aggregations.bucket.MultiBucketAggregationBuilder;
 import org.elasticsearch.search.aggregations.support.CoreValuesSourceType;
 import org.elasticsearch.search.aggregations.support.ValuesSource;
 import org.elasticsearch.search.aggregations.support.ValuesSourceAggregationBuilder;
@@ -32,8 +31,7 @@ import java.util.Objects;
 /**
  * The builder of the aggregatorFactory. Also implements the parsing of the request.
  */
-public class PathHierarchyAggregationBuilder extends ValuesSourceAggregationBuilder<ValuesSource, PathHierarchyAggregationBuilder>
-        implements MultiBucketAggregationBuilder {
+public class PathHierarchyAggregationBuilder extends ValuesSourceAggregationBuilder<ValuesSource, PathHierarchyAggregationBuilder> {
     public static final String NAME = "path_hierarchy";
 
     public static final ParseField SEPARATOR_FIELD = new ParseField("separator");

@@ -18,7 +18,6 @@ import org.elasticsearch.search.aggregations.AggregatorFactories.Builder;
 import org.elasticsearch.search.aggregations.AggregatorFactory;
 import org.elasticsearch.search.aggregations.BucketOrder;
 import org.elasticsearch.search.aggregations.InternalOrder;
-import org.elasticsearch.search.aggregations.bucket.MultiBucketAggregationBuilder;
 import org.elasticsearch.search.aggregations.support.CoreValuesSourceType;
 import org.elasticsearch.search.aggregations.support.ValuesSource;
 import org.elasticsearch.search.aggregations.support.ValueType;
@@ -42,8 +41,7 @@ import static java.util.Collections.unmodifiableMap;
 /**
  * The builder of the aggregatorFactory. Also implements the parsing of the request.
  */
-public class DateHierarchyAggregationBuilder extends ValuesSourceAggregationBuilder<ValuesSource.Numeric, DateHierarchyAggregationBuilder>
-        implements MultiBucketAggregationBuilder {
+public class DateHierarchyAggregationBuilder extends ValuesSourceAggregationBuilder<ValuesSource.Numeric, DateHierarchyAggregationBuilder> {
     public static final String NAME = "date_hierarchy";
 
 

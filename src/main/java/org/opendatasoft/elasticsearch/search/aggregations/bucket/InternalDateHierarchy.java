@@ -11,7 +11,6 @@ import org.elasticsearch.search.aggregations.InternalAggregations;
 import org.elasticsearch.search.aggregations.InternalMultiBucketAggregation;
 import org.elasticsearch.search.aggregations.InternalOrder;
 import org.elasticsearch.search.aggregations.KeyComparable;
-import org.elasticsearch.search.aggregations.bucket.MultiBucketAggregationBuilder;
 import org.elasticsearch.search.aggregations.bucket.MultiBucketsAggregation;
 import org.elasticsearch.search.aggregations.pipeline.PipelineAggregator;
 
@@ -29,7 +28,7 @@ import java.util.Objects;
  * Mainly, returns the builder and makes the reduce of buckets.
  */
 public class InternalDateHierarchy extends InternalMultiBucketAggregation<InternalDateHierarchy,
-        InternalDateHierarchy.InternalBucket> implements MultiBucketAggregationBuilder {
+        InternalDateHierarchy.InternalBucket> {
 
     /**
      * The bucket class of InternalDateHierarchy.
