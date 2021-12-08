@@ -14,13 +14,8 @@ import org.elasticsearch.search.aggregations.AggregatorFactory;
 import org.elasticsearch.search.aggregations.AggregatorFactories.Builder;
 import org.elasticsearch.search.aggregations.BucketOrder;
 import org.elasticsearch.search.aggregations.InternalOrder;
-import org.elasticsearch.search.aggregations.support.CoreValuesSourceType;
-import org.elasticsearch.search.aggregations.support.ValuesSource;
-import org.elasticsearch.search.aggregations.support.ValuesSourceAggregationBuilder;
-import org.elasticsearch.search.aggregations.support.ValuesSourceAggregatorFactory;
-import org.elasticsearch.search.aggregations.support.ValuesSourceConfig;
+import org.elasticsearch.search.aggregations.support.*;
 import org.elasticsearch.search.aggregations.support.ValuesSourceParserHelper;
-import org.elasticsearch.search.aggregations.support.ValueType;
 
 import java.io.IOException;
 import java.util.List;
@@ -31,8 +26,10 @@ import java.util.Objects;
 /**
  * The builder of the aggregatorFactory. Also implements the parsing of the request.
  */
-public class PathHierarchyAggregationBuilder extends ValuesSourceAggregationBuilder<ValuesSource, PathHierarchyAggregationBuilder> {
+public class PathHierarchyAggregationBuilder extends ValuesSourceAggregationBuilder<PathHierarchyAggregationBuilder> {
     public static final String NAME = "path_hierarchy";
+    public static final ValuesSourceRegistry.RegistryKey<PathHierarchyAggregationSupplier> REGISTRY_KEY =
+            new ValuesSourceRegistry.RegistryKey<>(NAME, PathHierarchyAggregationSupplier.class);
 
     public static final ParseField SEPARATOR_FIELD = new ParseField("separator");
     public static final ParseField MIN_DEPTH_FIELD = new ParseField("min_depth");
@@ -320,5 +317,8 @@ public class PathHierarchyAggregationBuilder extends ValuesSourceAggregationBuil
     public String getType() {
         return NAME;
     }
+
+    @Override
+    protected ValuesSourceRegistry.RegistryKey<?> getRegistryKey() { return REGISTRY_KEY; }
 }
 

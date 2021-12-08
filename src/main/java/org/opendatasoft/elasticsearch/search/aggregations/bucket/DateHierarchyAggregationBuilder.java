@@ -18,12 +18,7 @@ import org.elasticsearch.search.aggregations.AggregatorFactories.Builder;
 import org.elasticsearch.search.aggregations.AggregatorFactory;
 import org.elasticsearch.search.aggregations.BucketOrder;
 import org.elasticsearch.search.aggregations.InternalOrder;
-import org.elasticsearch.search.aggregations.support.CoreValuesSourceType;
-import org.elasticsearch.search.aggregations.support.ValuesSource;
-import org.elasticsearch.search.aggregations.support.ValueType;
-import org.elasticsearch.search.aggregations.support.ValuesSourceConfig;
-import org.elasticsearch.search.aggregations.support.ValuesSourceAggregationBuilder;
-import org.elasticsearch.search.aggregations.support.ValuesSourceAggregatorFactory;
+import org.elasticsearch.search.aggregations.support.*;
 import org.elasticsearch.search.aggregations.support.ValuesSourceParserHelper;
 
 import java.io.IOException;
@@ -41,8 +36,10 @@ import static java.util.Collections.unmodifiableMap;
 /**
  * The builder of the aggregatorFactory. Also implements the parsing of the request.
  */
-public class DateHierarchyAggregationBuilder extends ValuesSourceAggregationBuilder<ValuesSource.Numeric, DateHierarchyAggregationBuilder> {
+public class DateHierarchyAggregationBuilder extends ValuesSourceAggregationBuilder<DateHierarchyAggregationBuilder> {
     public static final String NAME = "date_hierarchy";
+    public static final ValuesSourceRegistry.RegistryKey<DateHierarchyAggregationSupplier> REGISTRY_KEY =
+            new ValuesSourceRegistry.RegistryKey<>(NAME, DateHierarchyAggregationSupplier.class);
 
 
     public static final ParseField INTERVAL_FIELD = new ParseField("interval");
@@ -375,5 +372,8 @@ public class DateHierarchyAggregationBuilder extends ValuesSourceAggregationBuil
     public String getType() {
         return NAME;
     }
+
+    @Override
+    protected ValuesSourceRegistry.RegistryKey<?> getRegistryKey() { return REGISTRY_KEY; }
 }
 
