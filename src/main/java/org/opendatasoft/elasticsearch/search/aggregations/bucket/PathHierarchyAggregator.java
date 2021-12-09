@@ -12,24 +12,13 @@ import org.elasticsearch.common.util.BytesRefHash;
 import org.elasticsearch.common.xcontent.ToXContentFragment;
 import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.index.fielddata.SortedBinaryDocValues;
-import org.elasticsearch.search.aggregations.Aggregator;
-import org.elasticsearch.search.aggregations.BucketOrder;
-import org.elasticsearch.search.aggregations.InternalOrder;
-import org.elasticsearch.search.aggregations.AggregatorFactories;
-import org.elasticsearch.search.aggregations.InternalAggregation;
-import org.elasticsearch.search.aggregations.LeafBucketCollector;
-import org.elasticsearch.search.aggregations.LeafBucketCollectorBase;
+import org.elasticsearch.search.aggregations.*;
 import org.elasticsearch.search.aggregations.bucket.BucketsAggregator;
 import org.elasticsearch.search.aggregations.support.ValuesSource;
 import org.elasticsearch.search.internal.SearchContext;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
 import java.util.regex.Pattern;
 
 public class PathHierarchyAggregator extends BucketsAggregator {
@@ -122,6 +111,7 @@ public class PathHierarchyAggregator extends BucketsAggregator {
     private final BucketOrder order;
     private final long minDocCount;
     private final int minDepth;
+    protected final Comparator<InternalPathHierarchy.InternalBucket> partiallyBuiltBucketComparator;
     private final BucketCountThresholds bucketCountThresholds;
     private final BytesRef separator;
 
@@ -138,12 +128,14 @@ public class PathHierarchyAggregator extends BucketsAggregator {
             Aggregator parent,
             Map<String, Object> metadata
     ) throws IOException {
-        super(name, factories, context, parent, metadata);
+        super(name, factories, context, parent, CardinalityUpperBound.MANY, metadata);
         this.valuesSource = valuesSource;
         this.separator = separator;
         this.minDocCount = minDocCount;
         bucketOrds = new BytesRefHash(1, context.bigArrays());
-        this.order = InternalOrder.validate(order, this);
+        order.validate(this);
+        this.order = order;
+        this.partiallyBuiltBucketComparator = order == null ? null : order.partiallyBuiltBucketComparator(b -> b.bucketOrd, this);
         this.bucketCountThresholds = bucketCountThresholds;
         this.minDepth = minDepth;
     }
@@ -194,58 +186,59 @@ public class PathHierarchyAggregator extends BucketsAggregator {
     }
 
     @Override
-    public InternalAggregation buildAggregation(long owningBucketOrdinal) throws IOException {
-        assert owningBucketOrdinal == 0;
+    public InternalAggregation[] buildAggregations(long[] owningBucketOrdinals) throws IOException {
+        InternalPathHierarchy.InternalBucket[][] topBucketsPerOrd = new InternalPathHierarchy.InternalBucket[owningBucketOrdinals.length][];
+        InternalPathHierarchy[] results = new InternalPathHierarchy[owningBucketOrdinals.length];
 
-        // build buckets and store them sorted
-        final int size = (int) Math.min(bucketOrds.size(), bucketCountThresholds.getShardSize());
+        for (int ordIdx = 0; ordIdx < owningBucketOrdinals.length; ordIdx++) {
+            assert owningBucketOrdinals[ordIdx] == 0;
 
-        PathSortedTree<String, InternalPathHierarchy.InternalBucket> pathSortedTree = new PathSortedTree<>(order.comparator(this), size);
+            final int size = (int) Math.min(bucketOrds.size(), bucketCountThresholds.getShardSize());
+            PathSortedTree<String, InternalPathHierarchy.InternalBucket> pathSortedTree = new PathSortedTree<>(partiallyBuiltBucketComparator, size);
 
-        InternalPathHierarchy.InternalBucket spare = null;
-        for (int i = 0; i < bucketOrds.size(); i++) {
-            spare = new InternalPathHierarchy.InternalBucket(0, null, null, new BytesRef(), 0, 0, null);
-            BytesRef term = new BytesRef();
-            bucketOrds.get(i, term);
+            InternalPathHierarchy.InternalBucket spare = null;
+            for (int i = 0; i < bucketOrds.size(); i++) {
+                spare = new InternalPathHierarchy.InternalBucket(0, null, null, new BytesRef(), 0, 0, null);
+                BytesRef term = new BytesRef();
+                bucketOrds.get(i, term);
 
-            String quotedPattern = Pattern.quote(separator.utf8ToString());
+                String quotedPattern = Pattern.quote(separator.utf8ToString());
 
-            String [] paths = term.utf8ToString().split(quotedPattern, -1);
+                String[] paths = term.utf8ToString().split(quotedPattern, -1);
 
-            String [] pathsForTree;
+                String[] pathsForTree;
 
-            if (minDepth > 0) {
-                pathsForTree = Arrays.copyOfRange(paths, minDepth, paths.length);
-            } else {
-                pathsForTree = paths;
+                if (minDepth > 0) {
+                    pathsForTree = Arrays.copyOfRange(paths, minDepth, paths.length);
+                } else {
+                    pathsForTree = paths;
+                }
+
+                spare.termBytes = BytesRef.deepCopyOf(term);
+                spare.level = pathsForTree.length - 1;
+                spare.docCount = bucketDocCount(i);
+                spare.basename = paths[paths.length - 1];
+                spare.minDepth = minDepth;
+                spare.bucketOrd = i;
+                spare.paths = paths;
+
+                pathSortedTree.add(pathsForTree, spare);
+
             }
-
-            spare.termBytes = BytesRef.deepCopyOf(term);
-            spare.aggregations = bucketAggregations(i);
-            spare.level = pathsForTree.length - 1;
-            spare.docCount = bucketDocCount(i);
-            spare.basename = paths[paths.length - 1];
-            spare.minDepth = minDepth;
-            spare.bucketOrd = i;
-            spare.paths = paths;
-
-            pathSortedTree.add(pathsForTree, spare);
-
-            consumeBucketsAndMaybeBreak(1);
+            // Get the top buckets
+            final List<InternalPathHierarchy.InternalBucket> list = new ArrayList<>(size);
+            long otherHierarchyNodes = pathSortedTree.getFullSize();
+            Iterator<InternalPathHierarchy.InternalBucket> iterator = pathSortedTree.consumer();
+            for (int i = 0; i < size; i++) {
+                final InternalPathHierarchy.InternalBucket bucket = iterator.next();
+                list.add(bucket);
+                otherHierarchyNodes -= 1;
+            }
+            results[ordIdx] = new InternalPathHierarchy(name, Arrays.asList(topBucketsPerOrd[ordIdx]), order,
+                    minDocCount, bucketCountThresholds.getRequiredSize(), bucketCountThresholds.getShardSize(),
+                    otherHierarchyNodes, separator, metadata());
         }
-
-        // Get the top buckets
-        final List<InternalPathHierarchy.InternalBucket> list = new ArrayList<>(size);
-        long otherHierarchyNodes = pathSortedTree.getFullSize();
-        Iterator<InternalPathHierarchy.InternalBucket> iterator = pathSortedTree.consumer();
-        for (int i = 0; i < size; i++) {
-            final InternalPathHierarchy.InternalBucket bucket = iterator.next();
-            list.add(bucket);
-            otherHierarchyNodes -= 1;
-        }
-
-        return new InternalPathHierarchy(name, list, order, minDocCount, bucketCountThresholds.getRequiredSize(),
-                bucketCountThresholds.getShardSize(), otherHierarchyNodes, separator, metadata());
+        return results;
     }
 
     @Override
