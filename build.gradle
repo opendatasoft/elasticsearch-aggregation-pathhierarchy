@@ -16,11 +16,31 @@ version = "${plugin_version}"
 apply plugin: 'java'
 apply plugin: 'idea'
 apply plugin: 'elasticsearch.esplugin'
+apply plugin: 'elasticsearch.yaml-rest-test'
 
 // license of this project
 licenseFile = rootProject.file('LICENSE')
 noticeFile = rootProject.file('README.md')
 
+publishing {
+    publications {
+        // add license information to generated poms
+        all {
+            pom.withXml { XmlProvider xml ->
+                Node node = xml.asNode()
+
+                Node license = node.appendNode('licenses').appendNode('license')
+                license.appendNode('name', 'The MIT License (MIT)')
+                license.appendNode('url', './LICENSE')
+                license.appendNode('distribution', 'repo')
+
+                Node developer = node.appendNode('developers').appendNode('developer')
+                developer.appendNode('name', 'Opendatasoft')
+                developer.appendNode('url', 'https://www.opendatasoft.com/')
+            }
+        }
+    }
+}
 
 esplugin {
     name 'pathhierarchy-aggregation'
@@ -32,6 +52,13 @@ esplugin {
 
 dependencies {
     compile "org.elasticsearch:elasticsearch:${es_version}"
+    yamlRestTestImplementation "org.apache.logging.log4j:log4j-core:${versions.log4j}"
+}
+
+restResources {
+    restApi {
+        includeCore '*'
+    }
 }
 
 // Skip license headers check
@@ -43,3 +70,5 @@ checkstyleTest.enabled = true
 dependencyLicenses.enabled = true
 
 thirdPartyAudit.enabled = true
+
+loggerUsageCheck.enabled = false
