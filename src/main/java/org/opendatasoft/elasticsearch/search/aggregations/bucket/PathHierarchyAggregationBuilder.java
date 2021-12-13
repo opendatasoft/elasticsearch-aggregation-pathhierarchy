@@ -47,7 +47,7 @@ public class PathHierarchyAggregationBuilder extends ValuesSourceAggregationBuil
 
     public static final PathHierarchyAggregator.BucketCountThresholds DEFAULT_BUCKET_COUNT_THRESHOLDS = new
             PathHierarchyAggregator.BucketCountThresholds(10, -1);
-    private static final ObjectParser<PathHierarchyAggregationBuilder, Void> PARSER;
+    public static final ObjectParser<PathHierarchyAggregationBuilder, Void> PARSER;
     static {
         PARSER = new ObjectParser<>(PathHierarchyAggregationBuilder.NAME);
         ValuesSourceAggregationBuilder.declareFields(PARSER, true, true, false);
@@ -66,6 +66,10 @@ public class PathHierarchyAggregationBuilder extends ValuesSourceAggregationBuil
 
     public static AggregationBuilder parse(String aggregationName, XContentParser parser) throws IOException {
         return PARSER.parse(parser, new PathHierarchyAggregationBuilder(aggregationName), null);
+    }
+
+    public static void registerAggregators(ValuesSourceRegistry.Builder builder) {
+        PathHierarchyAggregatorFactory.registerAggregators(builder);
     }
 
     private static final String DEFAULT_SEPARATOR = "/";
@@ -94,7 +98,6 @@ public class PathHierarchyAggregationBuilder extends ValuesSourceAggregationBuil
 
     /**
      * Read from a stream
-     *
      */
     public PathHierarchyAggregationBuilder(StreamInput in) throws IOException {
         super(in);

@@ -35,6 +35,32 @@ import java.util.regex.Pattern;
 
 public class PathHierarchyAggregator extends BucketsAggregator {
 
+    public PathHierarchyAggregator(
+            String name,
+            AggregatorFactories factories,
+            BytesRef separator,
+            int minDepth,
+            BucketOrder order,
+            long minDocCount,
+            BucketCountThresholds bucketCountThresholds,
+            ValuesSource valuesSource,
+            SearchContext context,
+            Aggregator parent,
+            CardinalityUpperBound cardinalityUpperBound,
+            Map<String, Object> metadata
+    ) throws IOException {
+        super(name, factories, context, parent, cardinalityUpperBound, metadata);
+        this.valuesSource = valuesSource;
+        this.separator = separator;
+        this.minDocCount = minDocCount;
+        bucketOrds = new BytesRefHash(1, context.bigArrays());
+        order.validate(this);
+        this.order = order;
+        this.partiallyBuiltBucketComparator = order == null ? null : order.partiallyBuiltBucketComparator(b -> b.bucketOrd, this);
+        this.bucketCountThresholds = bucketCountThresholds;
+        this.minDepth = minDepth;
+    }
+
     public static class BucketCountThresholds implements Writeable, ToXContentFragment {
         private int requiredSize;
         private int shardSize;
@@ -126,31 +152,6 @@ public class PathHierarchyAggregator extends BucketsAggregator {
     protected final Comparator<InternalPathHierarchy.InternalBucket> partiallyBuiltBucketComparator;
     private final BucketCountThresholds bucketCountThresholds;
     private final BytesRef separator;
-
-    public PathHierarchyAggregator(
-            String name,
-            AggregatorFactories factories,
-            SearchContext context,
-            ValuesSource valuesSource,
-            BucketOrder order,
-            long minDocCount,
-            BucketCountThresholds bucketCountThresholds,
-            BytesRef separator,
-            int minDepth,
-            Aggregator parent,
-            Map<String, Object> metadata
-    ) throws IOException {
-        super(name, factories, context, parent, CardinalityUpperBound.MANY, metadata);
-        this.valuesSource = valuesSource;
-        this.separator = separator;
-        this.minDocCount = minDocCount;
-        bucketOrds = new BytesRefHash(1, context.bigArrays());
-        order.validate(this);
-        this.order = order;
-        this.partiallyBuiltBucketComparator = order == null ? null : order.partiallyBuiltBucketComparator(b -> b.bucketOrd, this);
-        this.bucketCountThresholds = bucketCountThresholds;
-        this.minDepth = minDepth;
-    }
 
     /**
      * The collector collects the docs, including or not some score (depending of the including of a Scorer) in the

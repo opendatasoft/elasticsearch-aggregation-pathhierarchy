@@ -119,7 +119,7 @@ public class DateHierarchyAggregationBuilder extends ValuesSourceAggregationBuil
 
     public static final DateHierarchyAggregator.BucketCountThresholds DEFAULT_BUCKET_COUNT_THRESHOLDS = new
             DateHierarchyAggregator.BucketCountThresholds(10, -1);
-    private static final ObjectParser<DateHierarchyAggregationBuilder, Void> PARSER;
+    public static final ObjectParser<DateHierarchyAggregationBuilder, Void> PARSER;
     static {
 
         PARSER = new ObjectParser<>(DateHierarchyAggregationBuilder.NAME);
@@ -144,6 +144,10 @@ public class DateHierarchyAggregationBuilder extends ValuesSourceAggregationBuil
 
     public static AggregationBuilder parse(String aggregationName, XContentParser parser) throws IOException {
         return PARSER.parse(parser, new DateHierarchyAggregationBuilder(aggregationName), null);
+    }
+
+    public static void registerAggregators(ValuesSourceRegistry.Builder builder) {
+        DateHierarchyAggregatorFactory.registerAggregators(builder);
     }
 
     private long minDocCount = 0;

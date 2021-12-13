@@ -20,6 +20,9 @@ import org.elasticsearch.search.aggregations.bucket.BucketUtils;
 import org.elasticsearch.search.aggregations.support.ValuesSource;
 import org.elasticsearch.search.aggregations.support.ValuesSourceAggregatorFactory;
 import org.elasticsearch.search.aggregations.support.ValuesSourceConfig;
+import org.elasticsearch.search.aggregations.support.ValuesSourceRegistry;
+import org.elasticsearch.search.aggregations.support.CoreValuesSourceType;
+
 import org.elasticsearch.search.internal.SearchContext;
 
 import java.io.IOException;
@@ -62,6 +65,24 @@ class PathHierarchyAggregatorFactory extends ValuesSourceAggregatorFactory {
         this.order = order;
         this.minDocCount = minDocCount;
         this.bucketCountThresholds = bucketCountThresholds;
+    }
+
+    public static void registerAggregators(ValuesSourceRegistry.Builder builder) {
+        builder.register(PathHierarchyAggregationBuilder.REGISTRY_KEY, CoreValuesSourceType.BYTES, (name,
+                                                                                                    factories,
+                                                                                                    separator,
+                                                                                                    minDepth,
+                                                                                                    maxDepth,
+                                                                                                    keepBlankPath,
+                                                                                                    order,
+                                                                                                    minDocCount,
+                                                                                                    bucketCountThresholds,
+                                                                                                    valuesSourceConfig,
+                                                                                                    aggregationContext,
+                                                                                                    parent,
+                                                                                                    cardinality,
+                                                                                                    metadata) -> null,
+                true);
     }
 
     @Override

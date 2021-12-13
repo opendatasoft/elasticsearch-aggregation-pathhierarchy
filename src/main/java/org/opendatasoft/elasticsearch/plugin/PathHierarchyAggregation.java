@@ -8,7 +8,7 @@ import org.opendatasoft.elasticsearch.search.aggregations.bucket.DateHierarchyAg
 import org.opendatasoft.elasticsearch.search.aggregations.bucket.InternalPathHierarchy;
 import org.opendatasoft.elasticsearch.search.aggregations.bucket.InternalDateHierarchy;
 
-public class PathHierarchyAggregation extends Plugin implements SearchPlugin {
+public class PathHierarchyAggregation  extends Plugin implements SearchPlugin {
     @Override
     public ArrayList<SearchPlugin.AggregationSpec> getAggregations() {
         ArrayList<SearchPlugin.AggregationSpec> r = new ArrayList<>();
@@ -18,17 +18,17 @@ public class PathHierarchyAggregation extends Plugin implements SearchPlugin {
                         PathHierarchyAggregationBuilder.NAME,
                         PathHierarchyAggregationBuilder::new,
                         PathHierarchyAggregationBuilder::parse)
-                .addResultReader(InternalPathHierarchy::new)
+                        .addResultReader(InternalPathHierarchy::new)
+                        .setAggregatorRegistrar(PathHierarchyAggregationBuilder::registerAggregators)
         );
-
         r.add(
                 new AggregationSpec(
                         DateHierarchyAggregationBuilder.NAME,
                         DateHierarchyAggregationBuilder::new,
                         DateHierarchyAggregationBuilder::parse)
                         .addResultReader(InternalDateHierarchy::new)
+                        .setAggregatorRegistrar(DateHierarchyAggregationBuilder::registerAggregators)
         );
-
         return r;
     }
 }

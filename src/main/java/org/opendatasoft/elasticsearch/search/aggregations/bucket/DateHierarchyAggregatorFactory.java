@@ -10,8 +10,10 @@ import org.elasticsearch.search.aggregations.InternalAggregation;
 import org.elasticsearch.search.aggregations.InternalOrder;
 import org.elasticsearch.search.aggregations.NonCollectingAggregator;
 import org.elasticsearch.search.aggregations.bucket.BucketUtils;
+import org.elasticsearch.search.aggregations.support.CoreValuesSourceType;
 import org.elasticsearch.search.aggregations.support.ValuesSourceAggregatorFactory;
 import org.elasticsearch.search.aggregations.support.ValuesSourceConfig;
+import org.elasticsearch.search.aggregations.support.ValuesSourceRegistry;
 import org.elasticsearch.search.internal.SearchContext;
 
 import java.io.IOException;
@@ -39,13 +41,28 @@ class DateHierarchyAggregatorFactory extends ValuesSourceAggregatorFactory {
                                    QueryShardContext context,
                                    AggregatorFactory parent,
                                    AggregatorFactories.Builder subFactoriesBuilder,
-                                   Map<String, Object> metaData
+                                   Map<String, Object> metadata
     ) throws IOException {
-        super(name, config, context, parent, subFactoriesBuilder, metaData);
+        super(name, config, context, parent, subFactoriesBuilder, metadata);
         this.order = order;
         this.roundingsInfo = roundingsInfo;
         this.minDocCount = minDocCount;
         this.bucketCountThresholds = bucketCountThresholds;
+    }
+
+    public static void registerAggregators(ValuesSourceRegistry.Builder builder) {
+        builder.register(DateHierarchyAggregationBuilder.REGISTRY_KEY, CoreValuesSourceType.DATE, (name,
+                                                                                                   factories,
+                                                                                                   order,
+                                                                                                   roundingsInfo,
+                                                                                                   minDocCount,
+                                                                                                   bucketCountThresholds,
+                                                                                                   valuesSourceConfig,
+                                                                                                   aggregationContext,
+                                                                                                   parent,
+                                                                                                   cardinality,
+                                                                                                   metadata) -> null,
+                true);
     }
 
     @Override

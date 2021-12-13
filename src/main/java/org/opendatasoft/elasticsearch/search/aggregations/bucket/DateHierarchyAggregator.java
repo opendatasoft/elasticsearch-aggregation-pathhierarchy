@@ -34,6 +34,30 @@ import java.util.Objects;
 
 public class DateHierarchyAggregator extends BucketsAggregator {
 
+    public DateHierarchyAggregator(
+            String name,
+            AggregatorFactories factories,
+            BucketOrder order,
+            List<DateHierarchyAggregationBuilder.RoundingInfo> roundingsInfo,
+            long minDocCount,
+            BucketCountThresholds bucketCountThresholds,
+            ValuesSource.Numeric valuesSource,
+            SearchContext context,
+            Aggregator parent,
+            CardinalityUpperBound cardinalityUpperBound,
+            Map<String, Object> metadata
+    ) throws IOException {
+        super(name, factories, context, parent, cardinalityUpperBound, metadata);
+        this.valuesSource = valuesSource;
+        this.roundingsInfo = roundingsInfo;
+        this.minDocCount = minDocCount;
+        bucketOrds =  new BytesRefHash(1, context.bigArrays());
+        this.bucketCountThresholds = bucketCountThresholds;
+        order.validate(this);
+        this.order = order;
+        this.partiallyBuiltBucketComparator = order == null ? null : order.partiallyBuiltBucketComparator(b -> b.bucketOrd, this);
+    }
+
     public static class BucketCountThresholds implements Writeable, ToXContentFragment {
         private int requiredSize;
         private int shardSize;
@@ -123,29 +147,6 @@ public class DateHierarchyAggregator extends BucketsAggregator {
     private final BucketCountThresholds bucketCountThresholds;
     private final List<DateHierarchyAggregationBuilder.RoundingInfo> roundingsInfo;
     protected final Comparator<InternalPathHierarchy.InternalBucket> partiallyBuiltBucketComparator;
-
-    public DateHierarchyAggregator(
-            String name,
-            AggregatorFactories factories,
-            SearchContext context,
-            ValuesSource.Numeric valuesSource,
-            BucketOrder order,
-            long minDocCount,
-            BucketCountThresholds bucketCountThresholds,
-            List<DateHierarchyAggregationBuilder.RoundingInfo> roundingsInfo,
-            Aggregator parent,
-            Map<String, Object> metadata
-    ) throws IOException {
-        super(name, factories, context, parent, CardinalityUpperBound.MANY, metadata);
-        this.valuesSource = valuesSource;
-        this.roundingsInfo = roundingsInfo;
-        this.minDocCount = minDocCount;
-        bucketOrds =  new BytesRefHash(1, context.bigArrays());
-        this.bucketCountThresholds = bucketCountThresholds;
-        order.validate(this);
-        this.order = order;
-        this.partiallyBuiltBucketComparator = order == null ? null : order.partiallyBuiltBucketComparator(b -> b.bucketOrd, this);
-    }
 
     /**
      * The collector collects the docs, including or not some score (depending of the including of a Scorer) in the
