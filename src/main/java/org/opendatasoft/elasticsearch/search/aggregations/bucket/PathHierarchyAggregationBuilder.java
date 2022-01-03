@@ -47,9 +47,9 @@ public class PathHierarchyAggregationBuilder extends ValuesSourceAggregationBuil
 
     public static final PathHierarchyAggregator.BucketCountThresholds DEFAULT_BUCKET_COUNT_THRESHOLDS = new
             PathHierarchyAggregator.BucketCountThresholds(10, -1);
-    public static final ObjectParser<PathHierarchyAggregationBuilder, Void> PARSER;
+    public static final ObjectParser<PathHierarchyAggregationBuilder, String> PARSER =
+            ObjectParser.fromBuilder(NAME, PathHierarchyAggregationBuilder::new);
     static {
-        PARSER = new ObjectParser<>(PathHierarchyAggregationBuilder.NAME);
         ValuesSourceAggregationBuilder.declareFields(PARSER, true, true, false);
 
         PARSER.declareString(PathHierarchyAggregationBuilder::separator, SEPARATOR_FIELD);
@@ -112,8 +112,8 @@ public class PathHierarchyAggregationBuilder extends ValuesSourceAggregationBuil
     }
 
     private PathHierarchyAggregationBuilder(PathHierarchyAggregationBuilder clone, Builder factoriesBuilder,
-                                           Map<String, Object> metaData) {
-        super(clone, factoriesBuilder, metaData);
+                                           Map<String, Object> metadata) {
+        super(clone, factoriesBuilder, metadata);
         separator = clone.separator;
         minDepth = clone.minDepth;
         maxDepth = clone.maxDepth;
@@ -125,8 +125,8 @@ public class PathHierarchyAggregationBuilder extends ValuesSourceAggregationBuil
     }
 
     @Override
-    protected AggregationBuilder shallowCopy(AggregatorFactories.Builder factoriesBuilder, Map<String, Object> metaData) {
-        return new PathHierarchyAggregationBuilder(this, factoriesBuilder, metaData);
+    protected AggregationBuilder shallowCopy(AggregatorFactories.Builder factoriesBuilder, Map<String, Object> metadata) {
+        return new PathHierarchyAggregationBuilder(this, factoriesBuilder, metadata);
     }
 
     @Override

@@ -119,10 +119,10 @@ public class DateHierarchyAggregationBuilder extends ValuesSourceAggregationBuil
 
     public static final DateHierarchyAggregator.BucketCountThresholds DEFAULT_BUCKET_COUNT_THRESHOLDS = new
             DateHierarchyAggregator.BucketCountThresholds(10, -1);
-    public static final ObjectParser<DateHierarchyAggregationBuilder, Void> PARSER;
+    public static final ObjectParser<DateHierarchyAggregationBuilder, String> PARSER =
+            ObjectParser.fromBuilder(NAME, DateHierarchyAggregationBuilder::new);
     static {
 
-        PARSER = new ObjectParser<>(DateHierarchyAggregationBuilder.NAME);
         ValuesSourceAggregationBuilder.declareFields(PARSER, true, true, true);
 
         PARSER.declareString(DateHierarchyAggregationBuilder::interval, INTERVAL_FIELD);
