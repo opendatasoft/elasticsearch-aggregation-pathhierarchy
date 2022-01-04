@@ -86,9 +86,10 @@ class PathHierarchyAggregatorFactory extends ValuesSourceAggregatorFactory {
     }
 
     @Override
-    protected Aggregator createUnmapped(SearchContext searchContext,
-                                        Aggregator parent,
-                                        Map<String, Object> metadata) throws IOException {
+    protected Aggregator createUnmapped(
+            SearchContext searchContext,
+            Aggregator parent,
+            Map<String, Object> metadata) throws IOException {
         final InternalAggregation aggregation = new InternalPathHierarchy(name, new ArrayList<>(), order, minDocCount,
                 bucketCountThresholds.getRequiredSize(), bucketCountThresholds.getShardSize(), 0, separator, metadata);
         return new NonCollectingAggregator(name, searchContext, parent, factories, metadata) {
@@ -99,13 +100,16 @@ class PathHierarchyAggregatorFactory extends ValuesSourceAggregatorFactory {
             }
 
             @Override
-            public InternalAggregation buildEmptyAggregation() { return aggregation; }
+            public InternalAggregation buildEmptyAggregation() {
+                return aggregation;
+            }
         };
     }
 
     @Override
     protected Aggregator doCreateInternal(SearchContext searchContext, Aggregator parent, CardinalityUpperBound cardinality,
                                           Map<String, Object> metadata) throws IOException {
+        ValuesSource valuesSourceBytes = new HierarchyValuesSource(config.getValuesSource(), separator, minDepth, maxDepth, keepBlankPath);
         PathHierarchyAggregator.BucketCountThresholds bucketCountThresholds = new
                 PathHierarchyAggregator.BucketCountThresholds(this.bucketCountThresholds);
         if (!InternalOrder.isKeyOrder(order)
@@ -116,23 +120,10 @@ class PathHierarchyAggregatorFactory extends ValuesSourceAggregatorFactory {
             bucketCountThresholds.setShardSize(BucketUtils.suggestShardSideQueueSize(bucketCountThresholds.getRequiredSize()));
         }
         bucketCountThresholds.ensureValidity();
-        return queryShardContext.getValuesSourceRegistry()
-                .getAggregator(PathHierarchyAggregationBuilder.REGISTRY_KEY, config)
-                .build(name,
-                        factories,
-                        separator,
-                        minDepth,
-                        maxDepth,
-                        keepBlankPath,
-                        order,
-                        minDocCount,
-                        bucketCountThresholds,
-                        config,
-                        searchContext,
-                        parent,
-                        cardinality,
-                        metadata
-                );
+        return new PathHierarchyAggregator(
+                name, factories, searchContext,
+                valuesSourceBytes, order, minDocCount, bucketCountThresholds, separator, minDepth,
+                parent, cardinality, metadata);
     }
 
     /**

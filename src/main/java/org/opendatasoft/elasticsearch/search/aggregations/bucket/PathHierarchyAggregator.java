@@ -35,21 +35,20 @@ import java.util.regex.Pattern;
 
 public class PathHierarchyAggregator extends BucketsAggregator {
 
-    public PathHierarchyAggregator(
-            String name,
-            AggregatorFactories factories,
-            BytesRef separator,
-            int minDepth,
-            BucketOrder order,
-            long minDocCount,
-            BucketCountThresholds bucketCountThresholds,
-            ValuesSource valuesSource,
-            SearchContext context,
-            Aggregator parent,
-            CardinalityUpperBound cardinalityUpperBound,
-            Map<String, Object> metadata
+    public PathHierarchyAggregator(String name,
+                                   AggregatorFactories factories,
+                                   SearchContext context,
+                                   ValuesSource valuesSource,
+                                   BucketOrder order,
+                                   long minDocCount,
+                                   BucketCountThresholds bucketCountThresholds,
+                                   BytesRef separator,
+                                   int minDepth,
+                                   Aggregator parent,
+                                   CardinalityUpperBound cardinality,
+                                   Map<String, Object> metadata
     ) throws IOException {
-        super(name, factories, context, parent, cardinalityUpperBound, metadata);
+        super(name, factories, context, parent, cardinality, metadata);
         this.valuesSource = valuesSource;
         this.separator = separator;
         this.minDocCount = minDocCount;

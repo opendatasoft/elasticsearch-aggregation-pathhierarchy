@@ -10,10 +10,11 @@ import org.elasticsearch.search.aggregations.InternalAggregation;
 import org.elasticsearch.search.aggregations.InternalOrder;
 import org.elasticsearch.search.aggregations.NonCollectingAggregator;
 import org.elasticsearch.search.aggregations.bucket.BucketUtils;
-import org.elasticsearch.search.aggregations.support.CoreValuesSourceType;
 import org.elasticsearch.search.aggregations.support.ValuesSourceAggregatorFactory;
 import org.elasticsearch.search.aggregations.support.ValuesSourceConfig;
 import org.elasticsearch.search.aggregations.support.ValuesSourceRegistry;
+import org.elasticsearch.search.aggregations.support.CoreValuesSourceType;
+import org.elasticsearch.search.aggregations.support.ValuesSource;
 import org.elasticsearch.search.internal.SearchContext;
 
 import java.io.IOException;
@@ -84,8 +85,9 @@ class DateHierarchyAggregatorFactory extends ValuesSourceAggregatorFactory {
     }
 
     @Override
-    protected Aggregator doCreateInternal(SearchContext searchContext, Aggregator parent, CardinalityUpperBound cardinality,
-                                          Map<String, Object> metadata) throws IOException {
+    protected Aggregator doCreateInternal(
+            SearchContext searchContext, Aggregator parent, CardinalityUpperBound cardinality, Map<String, Object> metadata
+    ) throws IOException {
 
         DateHierarchyAggregator.BucketCountThresholds bucketCountThresholds = new
                 DateHierarchyAggregator.BucketCountThresholds(this.bucketCountThresholds);
@@ -97,20 +99,9 @@ class DateHierarchyAggregatorFactory extends ValuesSourceAggregatorFactory {
             bucketCountThresholds.setShardSize(BucketUtils.suggestShardSideQueueSize(bucketCountThresholds.getRequiredSize()));
         }
         bucketCountThresholds.ensureValidity();
-        return queryShardContext.getValuesSourceRegistry()
-                .getAggregator(DateHierarchyAggregationBuilder.REGISTRY_KEY, config)
-                .build(name,
-                        factories,
-                        order,
-                        roundingsInfo,
-                        minDocCount,
-                        bucketCountThresholds,
-                        config,
-                        searchContext,
-                        parent,
-                        cardinality,
-                        metadata
-                );
+        return new DateHierarchyAggregator(
+                name, factories, searchContext, (ValuesSource.Numeric) config.getValuesSource(),
+                order, minDocCount, bucketCountThresholds, roundingsInfo, parent, cardinality, metadata);
     }
 }
 

@@ -34,18 +34,17 @@ import java.util.Objects;
 
 public class DateHierarchyAggregator extends BucketsAggregator {
 
-    public DateHierarchyAggregator(
-            String name,
-            AggregatorFactories factories,
-            BucketOrder order,
-            List<DateHierarchyAggregationBuilder.RoundingInfo> roundingsInfo,
-            long minDocCount,
-            BucketCountThresholds bucketCountThresholds,
-            ValuesSource.Numeric valuesSource,
-            SearchContext context,
-            Aggregator parent,
-            CardinalityUpperBound cardinalityUpperBound,
-            Map<String, Object> metadata
+    public DateHierarchyAggregator(String name,
+                                   AggregatorFactories factories,
+                                   SearchContext context,
+                                   ValuesSource.Numeric valuesSource,
+                                   BucketOrder order,
+                                   long minDocCount,
+                                   BucketCountThresholds bucketCountThresholds,
+                                   List<DateHierarchyAggregationBuilder.RoundingInfo> roundingsInfo,
+                                   Aggregator parent,
+                                   CardinalityUpperBound cardinalityUpperBound,
+                                   Map<String,  Object> metadata
     ) throws IOException {
         super(name, factories, context, parent, cardinalityUpperBound, metadata);
         this.valuesSource = valuesSource;
