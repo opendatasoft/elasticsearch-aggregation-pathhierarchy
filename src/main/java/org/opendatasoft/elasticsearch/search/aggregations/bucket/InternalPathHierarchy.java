@@ -29,7 +29,7 @@ import java.util.TreeMap;
  * Mainly, returns the builder and makes the reduce of buckets.
  */
 public class InternalPathHierarchy extends InternalMultiBucketAggregation<InternalPathHierarchy,
-        InternalPathHierarchy.InternalBucket> implements PathHierarchy {
+        InternalPathHierarchy.InternalBucket> {
     protected static final ParseField SUM_OF_OTHER_HIERARCHY_NODES = new ParseField("sum_other_hierarchy_nodes");
     protected static final ParseField PATHS = new ParseField("path");
 
@@ -38,7 +38,7 @@ public class InternalPathHierarchy extends InternalMultiBucketAggregation<Intern
      * @see MultiBucketsAggregation.Bucket
      */
     public static class InternalBucket extends InternalMultiBucketAggregation.InternalBucket implements
-            PathHierarchy.Bucket, KeyComparable<InternalBucket> {
+            KeyComparable<InternalBucket> {
 
         BytesRef termBytes;
         long bucketOrd;
@@ -130,7 +130,7 @@ public class InternalPathHierarchy extends InternalMultiBucketAggregation<Intern
     }
 
 
-    private List<InternalBucket> buckets;
+    private List<InternalPathHierarchy.InternalBucket> buckets;
     private BytesRef separator;
     private BucketOrder order;
     private final int requiredSize;

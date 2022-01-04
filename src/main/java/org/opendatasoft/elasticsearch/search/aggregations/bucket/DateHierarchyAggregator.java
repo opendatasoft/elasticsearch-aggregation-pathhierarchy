@@ -23,7 +23,6 @@ import org.elasticsearch.search.aggregations.support.ValuesSource;
 import org.elasticsearch.search.internal.SearchContext;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.Iterator;
@@ -221,12 +220,12 @@ public class DateHierarchyAggregator extends BucketsAggregator {
             }
 
             // Get the top buckets
-            final List<InternalDateHierarchy.InternalBucket> list = new ArrayList<>(size);
+            topBucketsPerOrd[ordIdx] = new InternalDateHierarchy.InternalBucket[size];
             long otherHierarchyNodes = pathSortedTree.getFullSize();
             Iterator<InternalDateHierarchy.InternalBucket> iterator = pathSortedTree.consumer();
             for (int i = 0; i < size; i++) {
                 final InternalDateHierarchy.InternalBucket bucket = iterator.next();
-                list.add(bucket);
+                topBucketsPerOrd[ordIdx][i] = bucket;
                 otherHierarchyNodes -= 1;
             }
 

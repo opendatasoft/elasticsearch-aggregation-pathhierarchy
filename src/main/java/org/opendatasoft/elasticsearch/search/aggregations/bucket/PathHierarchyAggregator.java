@@ -24,11 +24,9 @@ import org.elasticsearch.search.aggregations.support.ValuesSource;
 import org.elasticsearch.search.internal.SearchContext;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.Iterator;
-import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.regex.Pattern;
@@ -239,14 +237,15 @@ public class PathHierarchyAggregator extends BucketsAggregator {
 
             }
             // Get the top buckets
-            final List<InternalPathHierarchy.InternalBucket> list = new ArrayList<>(size);
+            topBucketsPerOrd[ordIdx] = new InternalPathHierarchy.InternalBucket[size];
             long otherHierarchyNodes = pathSortedTree.getFullSize();
             Iterator<InternalPathHierarchy.InternalBucket> iterator = pathSortedTree.consumer();
             for (int i = 0; i < size; i++) {
                 final InternalPathHierarchy.InternalBucket bucket = iterator.next();
-                list.add(bucket);
+                topBucketsPerOrd[ordIdx][i] = bucket;
                 otherHierarchyNodes -= 1;
             }
+
             results[ordIdx] = new InternalPathHierarchy(name, Arrays.asList(topBucketsPerOrd[ordIdx]), order,
                     minDocCount, bucketCountThresholds.getRequiredSize(), bucketCountThresholds.getShardSize(),
                     otherHierarchyNodes, separator, metadata());
