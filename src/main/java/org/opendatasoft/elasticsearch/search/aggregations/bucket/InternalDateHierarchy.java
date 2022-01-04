@@ -135,9 +135,9 @@ public class InternalDateHierarchy extends InternalMultiBucketAggregation<Intern
             int requiredSize,
             int shardSize,
             long otherHierarchyNodes,
-            Map<String, Object> metaData
+            Map<String, Object> metadata
     ) {
-        super(name, metaData);
+        super(name, metadata);
         this.buckets = buckets;
         this.order = order;
         this.minDocCount = minDocCount;

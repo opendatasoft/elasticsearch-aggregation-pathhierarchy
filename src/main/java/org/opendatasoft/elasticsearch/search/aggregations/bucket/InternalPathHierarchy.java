@@ -147,9 +147,9 @@ public class InternalPathHierarchy extends InternalMultiBucketAggregation<Intern
             int shardSize,
             long otherHierarchyNodes,
             BytesRef separator,
-            Map<String, Object> metaData
+            Map<String, Object> metadata
     ) {
-        super(name, metaData);
+        super(name, metadata);
         this.buckets = buckets;
         this.order = order;
         this.minDocCount = minDocCount;
