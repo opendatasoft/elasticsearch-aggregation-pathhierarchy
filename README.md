@@ -19,7 +19,25 @@ Installation
 
 Build
 -----
-Requires Java 12
+Requires Java 14
+
+Development Environment Setup
+------------
+
+Build the plugin using gradle:
+
+`./gradlew build`
+
+OR
+
+`./gradlew assemble` (to avoid tests)
+
+Then the following command will start a dockerized ES and will install the previously built plugin:
+
+`docker-compose up`
+
+
+> NOTE: In `docker-compose.yml` you can uncomment the debug env and attach a REMOTE JVM on `*:5005` to debug the plugin.
 
 Path hierarchy aggregation
 --------------------------
