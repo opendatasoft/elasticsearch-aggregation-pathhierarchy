@@ -71,4 +71,5 @@ dependencyLicenses.enabled = true
 
 thirdPartyAudit.enabled = true
 
+// logger-usage artifact wasn't released for 7.10+ https://github.com/elastic/elasticsearch/issues/65247
 loggerUsageCheck.enabled = false
