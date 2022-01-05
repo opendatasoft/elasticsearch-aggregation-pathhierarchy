@@ -197,6 +197,7 @@ public class PathHierarchyAggregator extends BucketsAggregator {
 
     @Override
     public InternalAggregation[] buildAggregations(long[] owningBucketOrdinals) throws IOException {
+
         InternalPathHierarchy.InternalBucket[][] topBucketsPerOrd = new InternalPathHierarchy.InternalBucket[owningBucketOrdinals.length][];
         InternalPathHierarchy[] results = new InternalPathHierarchy[owningBucketOrdinals.length];
 
@@ -207,7 +208,7 @@ public class PathHierarchyAggregator extends BucketsAggregator {
             PathSortedTree<String, InternalPathHierarchy.InternalBucket> pathSortedTree =
                     new PathSortedTree<>(partiallyBuiltBucketComparator, size);
 
-            InternalPathHierarchy.InternalBucket spare = null;
+            InternalPathHierarchy.InternalBucket spare;
             for (int i = 0; i < bucketOrds.size(); i++) {
                 spare = new InternalPathHierarchy.InternalBucket(0, null, null, new BytesRef(), 0, 0, null);
                 BytesRef term = new BytesRef();
@@ -250,6 +251,14 @@ public class PathHierarchyAggregator extends BucketsAggregator {
                     minDocCount, bucketCountThresholds.getRequiredSize(), bucketCountThresholds.getShardSize(),
                     otherHierarchyNodes, separator, metadata());
         }
+
+        // Build sub-aggregations for pruned buckets
+        buildSubAggsForAllBuckets(
+                topBucketsPerOrd,
+                b -> b.bucketOrd,
+                (b, aggregations) -> b.aggregations = aggregations
+        );
+
         return results;
     }
 

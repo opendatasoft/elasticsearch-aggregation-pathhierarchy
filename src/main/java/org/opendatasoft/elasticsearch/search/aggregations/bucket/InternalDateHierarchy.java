@@ -38,6 +38,7 @@ public class InternalDateHierarchy extends InternalMultiBucketAggregation<Intern
 
         BytesRef key;
         String name;
+        long bucketOrd;
         protected String[] paths;
         protected long docCount;
         protected InternalAggregations aggregations;

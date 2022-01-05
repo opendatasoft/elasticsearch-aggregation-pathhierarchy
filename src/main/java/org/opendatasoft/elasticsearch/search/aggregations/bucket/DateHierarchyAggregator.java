@@ -191,6 +191,7 @@ public class DateHierarchyAggregator extends BucketsAggregator {
 
     @Override
     public InternalAggregation[] buildAggregations(long[] owningBucketOrdinals) throws IOException {
+
         InternalDateHierarchy.InternalBucket[][] topBucketsPerOrd = new InternalDateHierarchy.InternalBucket[owningBucketOrdinals.length][];
         InternalDateHierarchy[] results = new InternalDateHierarchy[owningBucketOrdinals.length];
 
@@ -202,7 +203,7 @@ public class DateHierarchyAggregator extends BucketsAggregator {
 
             PathSortedTree<String, InternalDateHierarchy.InternalBucket> pathSortedTree = new PathSortedTree<>(order.comparator(), size);
 
-            InternalDateHierarchy.InternalBucket spare = null;
+            InternalDateHierarchy.InternalBucket spare;
             for (int i = 0; i < bucketOrds.size(); i++) {
                 spare = new InternalDateHierarchy.InternalBucket(0, null, null, null, 0, null);
 
@@ -215,6 +216,7 @@ public class DateHierarchyAggregator extends BucketsAggregator {
                 spare.level = paths.length - 1;
                 spare.name = paths[spare.level];
                 spare.docCount = bucketDocCount(i);
+                spare.bucketOrd = i;
 
                 pathSortedTree.add(spare.paths, spare);
             }
@@ -233,6 +235,14 @@ public class DateHierarchyAggregator extends BucketsAggregator {
                     minDocCount, bucketCountThresholds.getRequiredSize(), bucketCountThresholds.getShardSize(),
                     otherHierarchyNodes, metadata());
         }
+
+        // Build sub-aggregations for pruned buckets
+        buildSubAggsForAllBuckets(
+                topBucketsPerOrd,
+                b -> b.bucketOrd,
+                (b, aggregations) -> b.aggregations = aggregations
+        );
+
         return results;
     }
 
