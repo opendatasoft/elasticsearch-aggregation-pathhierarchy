@@ -1,13 +1,13 @@
 package org.opendatasoft.elasticsearch.plugin;
 
-import java.util.ArrayList;
-
 import org.elasticsearch.plugins.Plugin;
 import org.elasticsearch.plugins.SearchPlugin;
+import org.opendatasoft.elasticsearch.search.aggregations.bucket.DateHierarchyAggregationBuilder;
 import org.opendatasoft.elasticsearch.search.aggregations.bucket.InternalDateHierarchy;
 import org.opendatasoft.elasticsearch.search.aggregations.bucket.InternalPathHierarchy;
 import org.opendatasoft.elasticsearch.search.aggregations.bucket.PathHierarchyAggregationBuilder;
-import org.opendatasoft.elasticsearch.search.aggregations.bucket.DateHierarchyAggregationBuilder;
+
+import java.util.ArrayList;
 
 public class PathHierarchyAggregation extends Plugin implements SearchPlugin {
     @Override

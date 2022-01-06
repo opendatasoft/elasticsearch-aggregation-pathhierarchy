@@ -9,10 +9,10 @@ services:
     environment:
       - discovery.type=single-node
       # NO DEBUG
-      - ES_JAVA_OPTS=-Xms512m -Xmx512m
+      # - ES_JAVA_OPTS=-Xms512m -Xmx512m
       # DEBUG
-      # - ES_JAVA_OPTS=-Xms512m -Xmx512m -agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=*:5005
+      - ES_JAVA_OPTS=-Xms512m -Xmx512m -agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=*:5005
     ports:
       - "9200:9200"
       # DEBUG
-      # - "5005:5005"
+      - "5005:5005"
