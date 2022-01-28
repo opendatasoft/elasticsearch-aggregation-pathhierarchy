@@ -7,7 +7,6 @@ import org.apache.lucene.util.BytesRefBuilder;
 import org.apache.lucene.util.FutureArrays;
 import org.elasticsearch.index.fielddata.SortedBinaryDocValues;
 import org.elasticsearch.index.fielddata.SortingBinaryDocValues;
-import org.elasticsearch.index.query.QueryShardContext;
 import org.elasticsearch.search.aggregations.Aggregator;
 import org.elasticsearch.search.aggregations.AggregatorFactories;
 import org.elasticsearch.search.aggregations.AggregatorFactory;
@@ -17,13 +16,12 @@ import org.elasticsearch.search.aggregations.InternalAggregation;
 import org.elasticsearch.search.aggregations.InternalOrder;
 import org.elasticsearch.search.aggregations.NonCollectingAggregator;
 import org.elasticsearch.search.aggregations.bucket.BucketUtils;
+import org.elasticsearch.search.aggregations.support.AggregationContext;
 import org.elasticsearch.search.aggregations.support.ValuesSource;
 import org.elasticsearch.search.aggregations.support.ValuesSourceAggregatorFactory;
 import org.elasticsearch.search.aggregations.support.ValuesSourceConfig;
 import org.elasticsearch.search.aggregations.support.ValuesSourceRegistry;
 import org.elasticsearch.search.aggregations.support.CoreValuesSourceType;
-
-import org.elasticsearch.search.internal.SearchContext;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -52,7 +50,7 @@ class PathHierarchyAggregatorFactory extends ValuesSourceAggregatorFactory {
                                    BucketOrder order,
                                    long minDocCount,
                                    PathHierarchyAggregator.BucketCountThresholds bucketCountThresholds,
-                                   QueryShardContext context,
+                                   AggregationContext context,
                                    AggregatorFactory parent,
                                    AggregatorFactories.Builder subFactoriesBuilder,
                                    Map<String, Object> metaData
@@ -68,7 +66,7 @@ class PathHierarchyAggregatorFactory extends ValuesSourceAggregatorFactory {
     }
 
     public static void registerAggregators(ValuesSourceRegistry.Builder builder) {
-        builder.register(PathHierarchyAggregationBuilder.REGISTRY_KEY, CoreValuesSourceType.BYTES, (name,
+        builder.register(PathHierarchyAggregationBuilder.REGISTRY_KEY, CoreValuesSourceType.KEYWORD, (name,
                                                                                                     factories,
                                                                                                     separator,
                                                                                                     minDepth,
@@ -86,13 +84,10 @@ class PathHierarchyAggregatorFactory extends ValuesSourceAggregatorFactory {
     }
 
     @Override
-    protected Aggregator createUnmapped(
-            SearchContext searchContext,
-            Aggregator parent,
-            Map<String, Object> metadata) throws IOException {
+    protected Aggregator createUnmapped(Aggregator parent, Map<String, Object> metadata) throws IOException {
         final InternalAggregation aggregation = new InternalPathHierarchy(name, new ArrayList<>(), order, minDocCount,
                 bucketCountThresholds.getRequiredSize(), bucketCountThresholds.getShardSize(), 0, separator, metadata);
-        return new NonCollectingAggregator(name, searchContext, parent, factories, metadata) {
+        return new NonCollectingAggregator(name, context, parent, factories, metadata) {
             {
                 // even in the case of an unmapped aggregator, validate the
                 // order
@@ -107,7 +102,7 @@ class PathHierarchyAggregatorFactory extends ValuesSourceAggregatorFactory {
     }
 
     @Override
-    protected Aggregator doCreateInternal(SearchContext searchContext, Aggregator parent, CardinalityUpperBound cardinality,
+    protected Aggregator doCreateInternal(Aggregator parent, CardinalityUpperBound cardinality,
                                           Map<String, Object> metadata) throws IOException {
         ValuesSource valuesSourceBytes = new HierarchyValuesSource(config.getValuesSource(), separator, minDepth, maxDepth, keepBlankPath);
         PathHierarchyAggregator.BucketCountThresholds bucketCountThresholds = new
@@ -121,7 +116,7 @@ class PathHierarchyAggregatorFactory extends ValuesSourceAggregatorFactory {
         }
         bucketCountThresholds.ensureValidity();
         return new PathHierarchyAggregator(
-                name, factories, searchContext,
+                name, factories, context,
                 valuesSourceBytes, order, minDocCount, bucketCountThresholds, separator, minDepth,
                 parent, cardinality, metadata);
     }
