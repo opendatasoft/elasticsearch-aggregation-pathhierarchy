@@ -15,11 +15,11 @@ This is a multi bucket aggregation.
 Installation
 ------------
 
-`bin/plugin --install path_hierarchy --url "https://github.com/opendatasoft/elasticsearch-aggregation-pathhierarchy/releases/download/v7.6.0.0/pathhierarchy-aggregation-7.6.0.0.zip"`
+`bin/plugin --install path_hierarchy --url "https://github.com/opendatasoft/elasticsearch-aggregation-pathhierarchy/releases/download/v7.16.3.0/pathhierarchy-aggregation-7.16.3.0.zip"`
 
 Build
 -----
-Requires Java 14
+Requires Java 17
 
 Development Environment Setup
 ------------
@@ -329,7 +329,7 @@ Installation
 The first 3 digits of plugin version is Elasticsearch versioning. The last digit is used for plugin versioning under an elasticsearch version.
 
 To install it, launch this command in Elasticsearch directory replacing the url by the correct link for your Elasticsearch version (see table)
-`./bin/elasticsearch-plugin install https://github.com/opendatasoft/elasticsearch-aggregation-pathhierarchy/releases/download/v7.10.2.0/pathhierarchy-aggregation-7.10.2.0.zip`
+`./bin/elasticsearch-plugin install https://github.com/opendatasoft/elasticsearch-aggregation-pathhierarchy/releases/download/v7.16.3.0/pathhierarchy-aggregation-7.16.3.0.zip`
 
 | elasticsearch version | plugin version | plugin url |
 | --------------------- | -------------- | ---------- |
@@ -350,6 +350,7 @@ To install it, launch this command in Elasticsearch directory replacing the url 
 | 7.5.1 | 7.5.1.0 | https://github.com/opendatasoft/elasticsearch-aggregation-pathhierarchy/releases/download/v7.5.1.0/pathhierarchy-aggregation-7.5.1.0.zip |
 | 7.6.0 | 7.6.0.0 | https://github.com/opendatasoft/elasticsearch-aggregation-pathhierarchy/releases/download/v7.6.0.0/pathhierarchy-aggregation-7.6.0.0.zip |
 | 7.10.2 | 7.10.2.0 | https://github.com/opendatasoft/elasticsearch-aggregation-pathhierarchy/releases/download/v7.10.2.0/pathhierarchy-aggregation-7.10.2.0.zip |
+| 7.16.3 | 7.16.3.0 | https://github.com/opendatasoft/elasticsearch-aggregation-pathhierarchy/releases/download/v7.16.3.0/pathhierarchy-aggregation-7.16.3.0.zip |
 
 License
 -------
