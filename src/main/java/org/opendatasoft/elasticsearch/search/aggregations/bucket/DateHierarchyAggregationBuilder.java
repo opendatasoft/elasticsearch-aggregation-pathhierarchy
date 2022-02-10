@@ -207,8 +207,6 @@ public class DateHierarchyAggregationBuilder extends ValuesSourceAggregationBuil
         out.writeVLong(minDocCount);
         out.writeString(interval);
         order.writeTo(out);
-        boolean hasTimeZone = timeZone != null;
-        out.writeBoolean(hasTimeZone);
         out.writeOptionalZoneId(timeZone);
     }
 
