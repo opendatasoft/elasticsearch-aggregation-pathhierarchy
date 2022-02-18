@@ -19,7 +19,7 @@ Installation
 
 Build
 -----
-Requires Java 17
+Compatible with Java version from 15 to 17
 
 Development Environment Setup
 ------------
