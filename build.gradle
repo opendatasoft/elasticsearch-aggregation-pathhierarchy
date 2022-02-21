@@ -2,12 +2,16 @@ buildscript {
     repositories {
         mavenLocal()
         mavenCentral()
-        jcenter()
     }
 
     dependencies {
         classpath "org.elasticsearch.gradle:build-tools:${es_version}"
     }
+}
+
+repositories {
+    mavenLocal()
+    mavenCentral()
 }
 
 group = 'org.elasticsearch.plugin'
@@ -16,11 +20,7 @@ version = "${plugin_version}"
 apply plugin: 'java'
 apply plugin: 'idea'
 apply plugin: 'elasticsearch.esplugin'
-
-// license of this project
-licenseFile = rootProject.file('LICENSE')
-noticeFile = rootProject.file('README.md')
-
+apply plugin: 'elasticsearch.yaml-rest-test'
 
 esplugin {
     name 'pathhierarchy-aggregation'
@@ -31,15 +31,7 @@ esplugin {
 }
 
 dependencies {
-    compile "org.elasticsearch:elasticsearch:${es_version}"
+    implementation "org.elasticsearch:elasticsearch:${es_version}"
+    yamlRestTestImplementation "org.elasticsearch.test:framework:${es_version}"
+    yamlRestTestImplementation "org.apache.logging.log4j:log4j-core:2.17.1"
 }
-
-// Skip license headers check
-licenseHeaders.enabled = false
-
-// Use elasticsearch checkstyle rules
-checkstyleTest.enabled = true
-
-dependencyLicenses.enabled = true
-
-thirdPartyAudit.enabled = true

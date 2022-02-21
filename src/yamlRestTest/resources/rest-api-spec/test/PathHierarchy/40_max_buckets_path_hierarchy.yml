@@ -1,0 +1,91 @@
+setup:
+  - do:
+      indices.create:
+        index: filesystem
+        body:
+          settings:
+            number_of_shards: 1
+            number_of_replicas: 0
+          mappings:
+            properties:
+              path:
+                type: keyword
+              views:
+                type: integer
+
+  - do:
+      cluster.put_settings:
+        body:
+          transient:
+            search.max_buckets: "3"
+        flat_settings: true
+
+  - do:
+      cluster.health:
+        wait_for_status: green
+
+---
+teardown:
+
+  - do:
+      cluster.put_settings:
+        body:
+          transient:
+            search.max_buckets: null
+
+---
+"Test with filesystem arborescence":
+  - do:
+      index:
+        index: filesystem
+        id: 1
+        body: { "path": "/Spreadsheets/Budget_2013.xls", "views": 10 }
+
+  - do:
+      index:
+        index: filesystem
+        id: 2
+        body: { "path": "/Spreadsheets/Budget_2014.xls", "views": 7 }
+
+  - do:
+      index:
+        index: filesystem
+        id: 3
+        body: { "path": "/My documents/Test.txt", "views": 1 }
+
+  - do:
+      index:
+        index: filesystem
+        id: 4
+        body: { "path": "/Spreadsheets/Budget_2014.xls", "views": 12 }
+
+  - do:
+      indices.refresh: {}
+
+
+  # Search with limited size
+  - do:
+      search:
+        rest_total_hits_as_int: true
+        body: {
+          "size" : 0,
+          "aggs" : {
+            "tree" : {
+              "path_hierarchy" : {
+                "field" : "path",
+                "separator": "/",
+                "size": "3",
+                "shard_size": "3"
+              },
+              "aggs": {
+                "total_views": {
+                  "sum": {
+                    "field": "views"
+                  }
+                }
+              }
+            }
+          }
+        }
+
+  - match: { hits.total: 4 }

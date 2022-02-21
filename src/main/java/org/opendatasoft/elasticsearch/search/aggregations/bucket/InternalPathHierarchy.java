@@ -1,10 +1,10 @@
 package org.opendatasoft.elasticsearch.search.aggregations.bucket;
 
 import org.apache.lucene.util.BytesRef;
-import org.elasticsearch.common.ParseField;
+import org.elasticsearch.xcontent.ParseField;
 import org.elasticsearch.common.io.stream.StreamInput;
 import org.elasticsearch.common.io.stream.StreamOutput;
-import org.elasticsearch.common.xcontent.XContentBuilder;
+import org.elasticsearch.xcontent.XContentBuilder;
 import org.elasticsearch.search.aggregations.Aggregation;
 import org.elasticsearch.search.aggregations.Aggregations;
 import org.elasticsearch.search.aggregations.BucketOrder;
@@ -14,7 +14,6 @@ import org.elasticsearch.search.aggregations.InternalMultiBucketAggregation;
 import org.elasticsearch.search.aggregations.InternalOrder;
 import org.elasticsearch.search.aggregations.KeyComparable;
 import org.elasticsearch.search.aggregations.bucket.MultiBucketsAggregation;
-import org.elasticsearch.search.aggregations.pipeline.PipelineAggregator;
 
 import java.io.IOException;
 import java.util.Arrays;
@@ -30,7 +29,7 @@ import java.util.TreeMap;
  * Mainly, returns the builder and makes the reduce of buckets.
  */
 public class InternalPathHierarchy extends InternalMultiBucketAggregation<InternalPathHierarchy,
-        InternalPathHierarchy.InternalBucket> implements PathHierarchy {
+        InternalPathHierarchy.InternalBucket> {
     protected static final ParseField SUM_OF_OTHER_HIERARCHY_NODES = new ParseField("sum_other_hierarchy_nodes");
     protected static final ParseField PATHS = new ParseField("path");
 
@@ -39,7 +38,7 @@ public class InternalPathHierarchy extends InternalMultiBucketAggregation<Intern
      * @see MultiBucketsAggregation.Bucket
      */
     public static class InternalBucket extends InternalMultiBucketAggregation.InternalBucket implements
-            PathHierarchy.Bucket, KeyComparable<InternalBucket> {
+            KeyComparable<InternalBucket> {
 
         BytesRef termBytes;
         long bucketOrd;
@@ -67,7 +66,7 @@ public class InternalPathHierarchy extends InternalMultiBucketAggregation<Intern
         public InternalBucket(StreamInput in) throws IOException {
             termBytes = in.readBytesRef();
             docCount = in.readLong();
-            aggregations = new InternalAggregations(in);
+            aggregations = InternalAggregations.readFrom(in);
             level = in.readInt();
             minDepth = in.readInt();
             basename = in.readString();
@@ -131,7 +130,7 @@ public class InternalPathHierarchy extends InternalMultiBucketAggregation<Intern
     }
 
 
-    private List<InternalBucket> buckets;
+    private List<InternalPathHierarchy.InternalBucket> buckets;
     private BytesRef separator;
     private BucketOrder order;
     private final int requiredSize;
@@ -148,10 +147,9 @@ public class InternalPathHierarchy extends InternalMultiBucketAggregation<Intern
             int shardSize,
             long otherHierarchyNodes,
             BytesRef separator,
-            List<PipelineAggregator> pipelineAggregators,
-            Map<String, Object> metaData
+            Map<String, Object> metadata
     ) {
-        super(name, pipelineAggregators, metaData);
+        super(name, metadata);
         this.buckets = buckets;
         this.order = order;
         this.minDocCount = minDocCount;
@@ -212,7 +210,7 @@ public class InternalPathHierarchy extends InternalMultiBucketAggregation<Intern
     @Override
     public InternalPathHierarchy create(List<InternalBucket> buckets) {
         return new InternalPathHierarchy(this.name, buckets, order, minDocCount, requiredSize, shardSize, otherHierarchyNodes,
-                this.separator, this.pipelineAggregators(), this.metaData);
+                this.separator, this.metadata);
     }
 
     @Override
@@ -255,7 +253,7 @@ public class InternalPathHierarchy extends InternalMultiBucketAggregation<Intern
 
         // reduce and sort buckets depending of ordering rules
         final int size = !reduceContext.isFinalReduce() ? buckets.size() : Math.min(requiredSize, buckets.size());
-        PathSortedTree<String, InternalBucket> ordered = new PathSortedTree<>(order.comparator(null), size);
+        PathSortedTree<String, InternalBucket> ordered = new PathSortedTree<>(order.comparator(), size);
         for (List<InternalBucket> sameTermBuckets : buckets.values()) {
             final InternalBucket b = reduceBucket(sameTermBuckets, reduceContext);
             if (b.getDocCount() >= minDocCount || !reduceContext.isFinalReduce()) {
@@ -274,7 +272,7 @@ public class InternalPathHierarchy extends InternalMultiBucketAggregation<Intern
 
         long sum_other_hierarchy_nodes = ordered.getFullSize() - size + otherHierarchyNodes;
         return new InternalPathHierarchy(getName(), ordered.getAsList(), order, minDocCount, requiredSize, shardSize,
-                sum_other_hierarchy_nodes, separator, pipelineAggregators(), getMetaData());
+                sum_other_hierarchy_nodes, separator, getMetadata());
     }
 
     /**

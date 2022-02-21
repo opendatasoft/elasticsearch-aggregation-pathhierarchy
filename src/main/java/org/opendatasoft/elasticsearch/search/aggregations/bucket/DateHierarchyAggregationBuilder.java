@@ -1,31 +1,29 @@
 package org.opendatasoft.elasticsearch.search.aggregations.bucket;
 
 import org.elasticsearch.Version;
-import org.elasticsearch.common.ParseField;
+import org.elasticsearch.xcontent.ParseField;
 import org.elasticsearch.common.Rounding;
 import org.elasticsearch.common.io.stream.StreamInput;
 import org.elasticsearch.common.io.stream.StreamOutput;
 import org.elasticsearch.common.io.stream.Writeable;
 import org.elasticsearch.common.time.DateFormatter;
-import org.elasticsearch.common.xcontent.ObjectParser;
-import org.elasticsearch.common.xcontent.XContentBuilder;
-import org.elasticsearch.common.xcontent.XContentParser;
+import org.elasticsearch.xcontent.ObjectParser;
+import org.elasticsearch.xcontent.XContentBuilder;
+import org.elasticsearch.xcontent.XContentParser;
 import org.elasticsearch.index.mapper.DateFieldMapper;
-import org.elasticsearch.index.query.QueryShardContext;
+import org.elasticsearch.search.aggregations.support.AggregationContext;
 import org.elasticsearch.search.DocValueFormat;
 import org.elasticsearch.search.aggregations.AggregationBuilder;
 import org.elasticsearch.search.aggregations.AggregatorFactories.Builder;
 import org.elasticsearch.search.aggregations.AggregatorFactory;
 import org.elasticsearch.search.aggregations.BucketOrder;
 import org.elasticsearch.search.aggregations.InternalOrder;
-import org.elasticsearch.search.aggregations.bucket.MultiBucketAggregationBuilder;
 import org.elasticsearch.search.aggregations.support.CoreValuesSourceType;
-import org.elasticsearch.search.aggregations.support.ValuesSource;
-import org.elasticsearch.search.aggregations.support.ValueType;
-import org.elasticsearch.search.aggregations.support.ValuesSourceConfig;
 import org.elasticsearch.search.aggregations.support.ValuesSourceAggregationBuilder;
 import org.elasticsearch.search.aggregations.support.ValuesSourceAggregatorFactory;
-import org.elasticsearch.search.aggregations.support.ValuesSourceParserHelper;
+import org.elasticsearch.search.aggregations.support.ValuesSourceConfig;
+import org.elasticsearch.search.aggregations.support.ValuesSourceRegistry;
+import org.elasticsearch.search.aggregations.support.ValuesSourceType;
 
 import java.io.IOException;
 import java.time.ZoneId;
@@ -42,9 +40,10 @@ import static java.util.Collections.unmodifiableMap;
 /**
  * The builder of the aggregatorFactory. Also implements the parsing of the request.
  */
-public class DateHierarchyAggregationBuilder extends ValuesSourceAggregationBuilder<ValuesSource.Numeric, DateHierarchyAggregationBuilder>
-        implements MultiBucketAggregationBuilder {
+public class DateHierarchyAggregationBuilder extends ValuesSourceAggregationBuilder<DateHierarchyAggregationBuilder> {
     public static final String NAME = "date_hierarchy";
+    public static final ValuesSourceRegistry.RegistryKey<DateHierarchyAggregationSupplier> REGISTRY_KEY =
+            new ValuesSourceRegistry.RegistryKey<>(NAME, DateHierarchyAggregationSupplier.class);
 
 
     public static final ParseField INTERVAL_FIELD = new ParseField("interval");
@@ -120,11 +119,11 @@ public class DateHierarchyAggregationBuilder extends ValuesSourceAggregationBuil
 
     public static final DateHierarchyAggregator.BucketCountThresholds DEFAULT_BUCKET_COUNT_THRESHOLDS = new
             DateHierarchyAggregator.BucketCountThresholds(10, -1);
-    private static final ObjectParser<DateHierarchyAggregationBuilder, Void> PARSER;
+    public static final ObjectParser<DateHierarchyAggregationBuilder, String> PARSER =
+            ObjectParser.fromBuilder(NAME, DateHierarchyAggregationBuilder::new);
     static {
 
-        PARSER = new ObjectParser<>(DateHierarchyAggregationBuilder.NAME);
-        ValuesSourceParserHelper.declareNumericFields(PARSER, true, true, true);
+        ValuesSourceAggregationBuilder.declareFields(PARSER, true, true, true);
 
         PARSER.declareString(DateHierarchyAggregationBuilder::interval, INTERVAL_FIELD);
 
@@ -144,7 +143,11 @@ public class DateHierarchyAggregationBuilder extends ValuesSourceAggregationBuil
     }
 
     public static AggregationBuilder parse(String aggregationName, XContentParser parser) throws IOException {
-        return PARSER.parse(parser, new DateHierarchyAggregationBuilder(aggregationName, null), null);
+        return PARSER.parse(parser, new DateHierarchyAggregationBuilder(aggregationName), null);
+    }
+
+    public static void registerAggregators(ValuesSourceRegistry.Builder builder) {
+        DateHierarchyAggregatorFactory.registerAggregators(builder);
     }
 
     private long minDocCount = 0;
@@ -155,8 +158,8 @@ public class DateHierarchyAggregationBuilder extends ValuesSourceAggregationBuil
             DEFAULT_BUCKET_COUNT_THRESHOLDS);
 
 
-    private DateHierarchyAggregationBuilder(String name, ValueType valueType) {
-        super(name, CoreValuesSourceType.ANY, valueType);
+    private DateHierarchyAggregationBuilder(String name) {
+        super(name);
     }
 
     @Override
@@ -169,7 +172,7 @@ public class DateHierarchyAggregationBuilder extends ValuesSourceAggregationBuil
      *
      */
     public DateHierarchyAggregationBuilder(StreamInput in) throws IOException {
-        super(in, CoreValuesSourceType.ANY);
+        super(in);
         bucketCountThresholds = new DateHierarchyAggregator.BucketCountThresholds(in);
         minDocCount = in.readVLong();
         interval = in.readString();
@@ -190,6 +193,11 @@ public class DateHierarchyAggregationBuilder extends ValuesSourceAggregationBuil
         return new DateHierarchyAggregationBuilder(this, factoriesBuilder, metaData);
     }
 
+    @Override
+    protected ValuesSourceType defaultValueSourceType() {
+        return CoreValuesSourceType.DATE;
+    }
+
     /**
      * Write to a stream
      */
@@ -199,8 +207,6 @@ public class DateHierarchyAggregationBuilder extends ValuesSourceAggregationBuil
         out.writeVLong(minDocCount);
         out.writeString(interval);
         order.writeTo(out);
-        boolean hasTimeZone = timeZone != null;
-        out.writeBoolean(hasTimeZone);
         out.writeOptionalZoneId(timeZone);
     }
 
@@ -304,6 +310,10 @@ public class DateHierarchyAggregationBuilder extends ValuesSourceAggregationBuil
         return bucketCountThresholds.getRequiredSize();
     }
 
+    @Override
+    public BucketCardinality bucketCardinality() {
+        return BucketCardinality.MANY;
+    }
 
     /**
      * Sets the shard_size - indicating the number of term buckets each shard
@@ -328,17 +338,25 @@ public class DateHierarchyAggregationBuilder extends ValuesSourceAggregationBuil
     }
 
     @Override
-    protected ValuesSourceAggregatorFactory<ValuesSource.Numeric> innerBuild(
-            QueryShardContext context,
-            ValuesSourceConfig<ValuesSource.Numeric> config,
-            AggregatorFactory parent,
-            Builder subFactoriesBuilder) throws IOException {
+    protected ValuesSourceAggregatorFactory innerBuild(AggregationContext context,
+                                                       ValuesSourceConfig config,
+                                                       AggregatorFactory parent,
+                                                       Builder subFactoriesBuilder) throws IOException {
+
 
         final List<RoundingInfo> roundingsInfo = buildRoundings();
 
         return new DateHierarchyAggregatorFactory(
-                name, config, order, roundingsInfo, minDocCount, bucketCountThresholds,
-                context, parent, subFactoriesBuilder, metaData);
+                name,
+                config,
+                order,
+                roundingsInfo,
+                minDocCount,
+                bucketCountThresholds,
+                context,
+                parent,
+                subFactoriesBuilder,
+                metadata);
     }
 
     @Override
@@ -377,5 +395,8 @@ public class DateHierarchyAggregationBuilder extends ValuesSourceAggregationBuil
     public String getType() {
         return NAME;
     }
+
+    @Override
+    protected ValuesSourceRegistry.RegistryKey<?> getRegistryKey() { return REGISTRY_KEY; }
 }
 
