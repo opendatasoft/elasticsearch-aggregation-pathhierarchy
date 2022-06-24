@@ -1,0 +1,72 @@
+setup:
+  - do:
+      indices.create:
+        index: filesystem
+        body:
+          settings:
+            number_of_shards: 1
+            number_of_replicas: 0
+          mappings:
+            properties:
+              path1:
+                type: keyword
+              path2:
+                type: keyword
+
+  - do:
+      cluster.health:
+        wait_for_status: green
+
+---
+"Test with filesystem arborescence":
+  - do:
+      index:
+        index: filesystem
+        id: 1
+        body: { "path1": "/My documents/Spreadsheets/Budget_2013.xls", "path2": "/My documents/Spreadsheets/Budget_2014.xls" }
+
+  - do:
+      index:
+        index: filesystem
+        id: 2
+        body: { "path1": "/My documents/Spreadsheets/Budget_2014.xls", "path2": "/My documents/Spreadsheets/Budget_2013.xls" }
+
+  - do:
+      indices.refresh: {}
+
+
+# basic test
+  - do:
+      search:
+        rest_total_hits_as_int: true
+        body: {
+          "size" : 0,
+          "aggs": {
+            "_path1_agg": {
+              "path_hierarchy": {
+                "field": "path1",
+                "order": {
+                  "_key": "asc"
+                },
+                "shard_size": 100,
+                "size": 20000,
+                "min_doc_count": 0
+              }
+            },
+            "_path2_agg": {
+              "path_hierarchy": {
+                "field": "path2",
+                "order": {
+                  "_key": "asc"
+                },
+                "shard_size": 100,
+                "size": 20000,
+                "min_doc_count": 0
+              }
+            }
+          }
+        }
+
+  - match: { aggregations._path1_agg.buckets.0.key: "My documents" }
+
+  - match: { aggregations._path2_agg.buckets.0.key: "My documents" }

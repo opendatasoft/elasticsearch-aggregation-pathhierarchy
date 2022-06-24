@@ -320,16 +320,16 @@ public class PathHierarchyAggregationBuilder extends ValuesSourceAggregationBuil
         return builder.endObject();
     }
 
-    /**
-     * Used for caching requests, amongst other things.
-     */
     @Override
     public int hashCode() {
-        return Objects.hash(separator, minDepth, maxDepth, depth, order, minDocCount, bucketCountThresholds);
+        return Objects.hash(super.hashCode(), separator, minDepth, maxDepth, depth, order, minDocCount, bucketCountThresholds);
     }
 
     @Override
     public boolean equals(Object obj) {
+        if (this == obj) return true;
+        if (obj == null || getClass() != obj.getClass()) return false;
+        if (!super.equals(obj)) return false;
         PathHierarchyAggregationBuilder other = (PathHierarchyAggregationBuilder) obj;
         return Objects.equals(separator, other.separator)
                 && Objects.equals(minDepth, other.minDepth)

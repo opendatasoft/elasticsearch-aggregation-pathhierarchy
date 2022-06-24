@@ -1,5 +1,8 @@
 version: "3.7"
 
+networks:
+  es-network:
+
 services:
   elasticsearch-plugin-debug:
     build:
@@ -16,3 +19,14 @@ services:
       - "9200:9200"
       # DEBUG
       - "5005:5005"
+    networks:
+      - es-network
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:7.17.1
+    environment:
+      ELASTICSEARCH_HOSTS: http://elasticsearch-plugin-debug:9200/
+    ports:
+      - "5602:5601"
+    networks:
+      - es-network
