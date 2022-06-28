@@ -373,16 +373,16 @@ public class DateHierarchyAggregationBuilder extends ValuesSourceAggregationBuil
         return builder.endObject();
     }
 
-    /**
-     * Used for caching requests, amongst other things.
-     */
     @Override
     public int hashCode() {
-        return Objects.hash(interval, order, minDocCount, bucketCountThresholds, timeZone);
+        return Objects.hash(super.hashCode(), interval, order, minDocCount, bucketCountThresholds, timeZone);
     }
 
     @Override
     public boolean equals(Object obj) {
+        if (this == obj) return true;
+        if (obj == null || getClass() != obj.getClass()) return false;
+        if (!super.equals(obj)) return false;
         DateHierarchyAggregationBuilder other = (DateHierarchyAggregationBuilder) obj;
         return Objects.equals(interval, other.interval)
                 && Objects.equals(order, other.order)
