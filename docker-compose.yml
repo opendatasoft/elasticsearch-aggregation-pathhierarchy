@@ -23,7 +23,7 @@ services:
       - es-network
 
   kibana:
-    image: docker.elastic.co/kibana/kibana:7.17.1
+    image: docker.elastic.co/kibana/kibana:7.17.5
     environment:
       ELASTICSEARCH_HOSTS: http://elasticsearch-plugin-debug:9200/
     ports:
