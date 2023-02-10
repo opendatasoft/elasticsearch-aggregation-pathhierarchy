@@ -19,7 +19,6 @@ Installation
 
 Build
 -----
-Compatible with Java version 11
 
 Development Environment Setup
 ------------
@@ -65,7 +64,6 @@ Examples
 
 ```
 # Add data:
-
 PUT filesystem
 {
   "mappings": {
@@ -76,28 +74,16 @@ PUT filesystem
     }
   }
 }
-
-PUT /filesystem/_doc/1
-{
-  "path": "/My documents/Spreadsheets/Budget_2013.xls",
-  "views": 10
-}
-
-PUT /filesystem/_doc/2
-{
-  "path": "/My documents/Spreadsheets/Budget_2014.xls",
-  "views": 7
-}
-
-PUT /filesystem/_doc/3
-{
-  "path": "/My documents/Test.txt",
-  "views": 1
-}
+POST filesystem/_bulk?refresh
+{"index":{}}
+{"path":"/My documents/Spreadsheets/Budget_2013.xls","views":10}
+{"index":{}}
+{"path":"/My documents/Spreadsheets/Budget_2014.xls","views":7}
+{"index":{}}
+{"path":"/My documents/Test.txt","views":1}
 
 
 # Path hierarchy request :
-
 GET /filesystem/_search?size=0
 {
   "aggs": {
@@ -119,7 +105,6 @@ GET /filesystem/_search?size=0
 
 
 Result :
-
 {"aggregations": {
    "tree": {
      "sum_other_doc_count": 0,
@@ -170,13 +155,11 @@ Result :
      ]
    }
 }
-
 ```
 
 #### Script
 
 ```
-
 PUT calendar
 {
   "mappings": {
@@ -188,18 +171,13 @@ PUT calendar
   }
 }
 
-PUT /calendar/_doc/1
-{
-  "date": "2012-01-10T02:47:28"
-}
-PUT /calendar/_doc/2
-{
-  "date": "2012-01-05T01:43:35"
-}
-PUT /calendar/_doc/3
-{
-  "date": "2012-05-01T12:24:19"
-}
+POST calendar/_bulk?refresh
+{"index":{}}
+{"date": "2012-01-10T02:47:28"}
+{"index":{}}
+{"date": "2012-01-05T01:43:35"}
+{"index":{}}
+{"date": "2012-05-01T12:24:19"}
 
 GET /calendar/_search?size=0
 {
@@ -326,33 +304,13 @@ GET /calendar/_search?size=0
 Installation
 ------------
 
+Built with Java 17.
+
 The first 3 digits of plugin version is Elasticsearch versioning. The last digit is used for plugin versioning under an elasticsearch version.
 
-To install it, launch this command in Elasticsearch directory replacing the url by the correct link for your Elasticsearch version (see table)
+To install it, launch this command in Elasticsearch directory replacing the url with a release suiting your case (please check available releases [here](https://github.com/opendatasoft/elasticsearch-aggregation-pathhierarchy/releases)):
 `./bin/elasticsearch-plugin install https://github.com/opendatasoft/elasticsearch-aggregation-pathhierarchy/releases/download/v7.17.6.0/pathhierarchy-aggregation-7.17.6.0.zip`
 
-| elasticsearch version | plugin version | plugin url |
-| --------------------- | -------------- | ---------- |
-| 1.6.0 | 1.6.0.4 | https://github.com/opendatasoft/elasticsearch-aggregation-pathhierarchy/releases/download/v1.6.0.4/elasticsearch-aggregation-pathhierarchy-1.6.0.4.zip |
-| 6.0.1 | 6.0.1.1 | https://github.com/opendatasoft/elasticsearch-aggregation-pathhierarchy/releases/download/v6.0.1.1/elasticsearch-aggregation-pathhierarchy-6.0.1.1.zip |
-| 6.1.4 | 6.1.4.1 | https://github.com/opendatasoft/elasticsearch-aggregation-pathhierarchy/releases/download/v6.1.4.1/elasticsearch-aggregation-pathhierarchy-6.1.4.1.zip |
-| 6.2.4 | 6.2.4.1 | https://github.com/opendatasoft/elasticsearch-aggregation-pathhierarchy/releases/download/v6.2.4.1/elasticsearch-aggregation-pathhierarchy-6.2.4.1.zip |
-| 6.3.2 | 6.3.2.1 | https://github.com/opendatasoft/elasticsearch-aggregation-pathhierarchy/releases/download/v6.3.2.1/elasticsearch-aggregation-pathhierarchy-6.3.2.1.zip |
-| 6.4.3 | 6.4.3.0 | https://github.com/opendatasoft/elasticsearch-aggregation-pathhierarchy/releases/download/v6.4.3.0/elasticsearch-aggregation-pathhierarchy-6.4.3.0.zip |
-| 6.5.4 | 6.5.4.1 | https://github.com/opendatasoft/elasticsearch-aggregation-pathhierarchy/releases/download/v6.5.4.1/pathhierarchy-aggregation-6.5.4.1.zip |
-| 6.6.2 | 6.6.2.0 | https://github.com/opendatasoft/elasticsearch-aggregation-pathhierarchy/releases/download/v6.6.2.0/pathhierarchy-aggregation-6.6.2.0.zip |
-| 6.7.1 | 6.7.1.1 | https://github.com/opendatasoft/elasticsearch-aggregation-pathhierarchy/releases/download/v6.7.1.1/pathhierarchy-aggregation-6.7.1.1.zip |
-| 6.8.2 | 6.8.2.0 | https://github.com/opendatasoft/elasticsearch-aggregation-pathhierarchy/releases/download/v6.8.2.0/pathhierarchy-aggregation-6.8.2.0.zip |
-| 7.0.1 | 7.0.1.0 | https://github.com/opendatasoft/elasticsearch-aggregation-pathhierarchy/releases/download/v7.0.1.0/pathhierarchy-aggregation-7.0.1.0.zip |
-| 7.1.1 | 7.1.1.0 | https://github.com/opendatasoft/elasticsearch-aggregation-pathhierarchy/releases/download/v7.1.1.0/pathhierarchy-aggregation-7.1.1.0.zip |
-| 7.2.0 | 7.2.0.1 | https://github.com/opendatasoft/elasticsearch-aggregation-pathhierarchy/releases/download/v7.2.0.1/pathhierarchy-aggregation-7.2.0.1.zip |
-| 7.4.2 | 7.4.2.0 | https://github.com/opendatasoft/elasticsearch-aggregation-pathhierarchy/releases/download/v7.4.2.0/pathhierarchy-aggregation-7.4.2.0.zip |
-| 7.5.1 | 7.5.1.0 | https://github.com/opendatasoft/elasticsearch-aggregation-pathhierarchy/releases/download/v7.5.1.0/pathhierarchy-aggregation-7.5.1.0.zip |
-| 7.6.0 | 7.6.0.0 | https://github.com/opendatasoft/elasticsearch-aggregation-pathhierarchy/releases/download/v7.6.0.0/pathhierarchy-aggregation-7.6.0.0.zip |
-| 7.10.2 | 7.10.2.0 | https://github.com/opendatasoft/elasticsearch-aggregation-pathhierarchy/releases/download/v7.10.2.0/pathhierarchy-aggregation-7.10.2.0.zip |
-| 7.16.3 | 7.16.3.0 | https://github.com/opendatasoft/elasticsearch-aggregation-pathhierarchy/releases/download/v7.16.3.0/pathhierarchy-aggregation-7.16.3.0.zip |
-| 7.17.5 | 7.17.5.0 | https://github.com/opendatasoft/elasticsearch-aggregation-pathhierarchy/releases/download/v7.17.5.0/pathhierarchy-aggregation-7.17.5.0.zip |
-| 7.17.6 | 7.17.6.0 | https://github.com/opendatasoft/elasticsearch-aggregation-pathhierarchy/releases/download/v7.17.6.0/pathhierarchy-aggregation-7.17.6.0.zip |
 
 License
 -------
