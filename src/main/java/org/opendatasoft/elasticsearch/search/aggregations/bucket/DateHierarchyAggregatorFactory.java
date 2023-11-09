@@ -30,13 +30,13 @@ class DateHierarchyAggregatorFactory extends ValuesSourceAggregatorFactory {
 
     private long minDocCount;
     private BucketOrder order;
-    private List<DateHierarchyAggregationBuilder.RoundingInfo> roundingsInfo;
+    private List<DateHierarchyAggregationBuilder.PreparedRounding> preparedRoundings;
     private final DateHierarchyAggregator.BucketCountThresholds bucketCountThresholds;
 
     DateHierarchyAggregatorFactory(String name,
                                    ValuesSourceConfig config,
                                    BucketOrder order,
-                                   List<DateHierarchyAggregationBuilder.RoundingInfo> roundingsInfo,
+                                   List<DateHierarchyAggregationBuilder.PreparedRounding> preparedRoundings,
                                    long minDocCount,
                                    DateHierarchyAggregator.BucketCountThresholds bucketCountThresholds,
                                    AggregationContext context,
@@ -46,7 +46,7 @@ class DateHierarchyAggregatorFactory extends ValuesSourceAggregatorFactory {
     ) throws IOException {
         super(name, config, context, parent, subFactoriesBuilder, metadata);
         this.order = order;
-        this.roundingsInfo = roundingsInfo;
+        this.preparedRoundings = preparedRoundings;
         this.minDocCount = minDocCount;
         this.bucketCountThresholds = bucketCountThresholds;
     }
@@ -99,7 +99,7 @@ class DateHierarchyAggregatorFactory extends ValuesSourceAggregatorFactory {
         bucketCountThresholds.ensureValidity();
         return new DateHierarchyAggregator(
                 name, factories, context, (ValuesSource.Numeric) config.getValuesSource(),
-                order, minDocCount, bucketCountThresholds, roundingsInfo, parent, cardinality, metadata);
+                order, minDocCount, bucketCountThresholds, preparedRoundings, parent, cardinality, metadata);
     }
 }
 
