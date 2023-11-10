@@ -173,7 +173,7 @@ public class DateHierarchyAggregator extends BucketsAggregator {
                         String path = "";
                         for (DateHierarchyAggregationBuilder.PreparedRounding preparedRounding: preparedRoundings) {
                             long roundedValue = preparedRounding.prepared.round(value);
-                            preparedRounding.roundingInfo.format.format(roundedValue).toString();
+                            path += preparedRounding.roundingInfo.format.format(roundedValue).toString();
                             long bucketOrd = bucketOrds.add(new BytesRef(path));
                             if (bucketOrd < 0) { // already seen
                                 bucketOrd = -1 - bucketOrd;
