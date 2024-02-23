@@ -4,6 +4,7 @@ import org.apache.lucene.index.LeafReaderContext;
 import org.apache.lucene.index.SortedNumericDocValues;
 import org.apache.lucene.util.BytesRef;
 import org.elasticsearch.ElasticsearchException;
+import org.elasticsearch.common.Rounding;
 import org.elasticsearch.common.io.stream.StreamInput;
 import org.elasticsearch.common.io.stream.StreamOutput;
 import org.elasticsearch.common.io.stream.Writeable;
@@ -40,14 +41,14 @@ public class DateHierarchyAggregator extends BucketsAggregator {
                                    BucketOrder order,
                                    long minDocCount,
                                    BucketCountThresholds bucketCountThresholds,
-                                   List<DateHierarchyAggregationBuilder.RoundingInfo> roundingsInfo,
+                                   List<DateHierarchyAggregationBuilder.PreparedRounding> preparedRoundings,
                                    Aggregator parent,
                                    CardinalityUpperBound cardinalityUpperBound,
                                    Map<String,  Object> metadata
     ) throws IOException {
         super(name, factories, context, parent, cardinalityUpperBound, metadata);
         this.valuesSource = valuesSource;
-        this.roundingsInfo = roundingsInfo;
+        this.preparedRoundings = preparedRoundings;
         this.minDocCount = minDocCount;
         bucketOrds =  new BytesRefHash(1, context.bigArrays());
         this.bucketCountThresholds = bucketCountThresholds;
@@ -143,7 +144,7 @@ public class DateHierarchyAggregator extends BucketsAggregator {
     private final BucketOrder order;
     private final long minDocCount;
     private final BucketCountThresholds bucketCountThresholds;
-    private final List<DateHierarchyAggregationBuilder.RoundingInfo> roundingsInfo;
+    private final List<DateHierarchyAggregationBuilder.PreparedRounding> preparedRoundings;
     protected final Comparator<InternalPathHierarchy.InternalBucket> partiallyBuiltBucketComparator;
 
     /**
@@ -158,6 +159,7 @@ public class DateHierarchyAggregator extends BucketsAggregator {
             return LeafBucketCollector.NO_OP_COLLECTOR;
         }
         final SortedNumericDocValues values = valuesSource.longValues(ctx);
+
         return new LeafBucketCollectorBase(sub, values) {
 
             @Override
@@ -169,11 +171,9 @@ public class DateHierarchyAggregator extends BucketsAggregator {
                     for (int i = 0; i < valuesCount; ++i) {
                         long value = values.nextValue();
                         String path = "";
-                        for (DateHierarchyAggregationBuilder.RoundingInfo roundingInfo: roundingsInfo) {
-                            // A little hacky: Add a microsecond to avoid collision between min dates interval
-                            // Since interval cannot be set to microsecond, it is not a problem
-                            long roundedValue = roundingInfo.rounding.round(value);
-                            path += roundingInfo.format.format(roundedValue).toString();
+                        for (DateHierarchyAggregationBuilder.PreparedRounding preparedRounding: preparedRoundings) {
+                            long roundedValue = preparedRounding.prepared.round(value);
+                            path += preparedRounding.roundingInfo.format.format(roundedValue).toString();
                             long bucketOrd = bucketOrds.add(new BytesRef(path));
                             if (bucketOrd < 0) { // already seen
                                 bucketOrd = -1 - bucketOrd;

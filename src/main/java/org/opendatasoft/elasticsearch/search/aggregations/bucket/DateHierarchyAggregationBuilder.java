@@ -75,15 +75,28 @@ public class DateHierarchyAggregationBuilder extends ValuesSourceAggregationBuil
         }
     }
 
-    public List<RoundingInfo> buildRoundings() {
-        List<RoundingInfo> roundings = new ArrayList<>();
+    public static class PreparedRounding {
+        final RoundingInfo roundingInfo;
+        final Rounding.Prepared prepared;
+
+        public PreparedRounding(RoundingInfo roundingInfo, Rounding.Prepared prepared) {
+            this.roundingInfo = roundingInfo;
+            this.prepared = prepared;
+        }
+    }
+
+    public List<PreparedRounding> buildRoundings() {
+        List<PreparedRounding> roundings = new ArrayList<>();
 
         ZoneId timeZone = timeZone() == null ? ZoneOffset.UTC: timeZone();
 
-        for (String interval: INTERVAL_CONFIG.keySet()) {
-            roundings.add(new RoundingInfo(interval, createRounding(INTERVAL_CONFIG.get(interval).dateTimeUnit),
+        long now = System.currentTimeMillis();
+        for (String interval : INTERVAL_CONFIG.keySet()) {
+            RoundingInfo ri = new RoundingInfo(interval, createRounding(INTERVAL_CONFIG.get(interval).dateTimeUnit),
                     new DocValueFormat.DateTime(DateFormatter.forPattern(INTERVAL_CONFIG.get(interval).format), timeZone,
-                            DateFieldMapper.Resolution.MILLISECONDS)));
+                            DateFieldMapper.Resolution.MILLISECONDS));
+            roundings.add(new PreparedRounding(ri, ri.rounding.prepareForUnknown()));
+
             if (interval.equals(interval())) {
                 break;
             }
@@ -344,13 +357,13 @@ public class DateHierarchyAggregationBuilder extends ValuesSourceAggregationBuil
                                                        Builder subFactoriesBuilder) throws IOException {
 
 
-        final List<RoundingInfo> roundingsInfo = buildRoundings();
+        final List<PreparedRounding> preparedRoundings = buildRoundings();
 
         return new DateHierarchyAggregatorFactory(
                 name,
                 config,
                 order,
-                roundingsInfo,
+                preparedRoundings,
                 minDocCount,
                 bucketCountThresholds,
                 context,
