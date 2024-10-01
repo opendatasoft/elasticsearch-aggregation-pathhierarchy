@@ -15,10 +15,15 @@ This is a multi bucket aggregation.
 Installation
 ------------
 
-`bin/plugin --install path_hierarchy --url "https://github.com/opendatasoft/elasticsearch-aggregation-pathhierarchy/releases/download/v7.17.6.1/pathhierarchy-aggregation-7.17.6.1.zip"`
+To install it, launch this command in Elasticsearch directory replacing the url with a release suiting your case (please check available releases [here](https://github.com/opendatasoft/elasticsearch-aggregation-pathhierarchy/releases)):
+`./bin/elasticsearch-plugin install https://github.com/opendatasoft/elasticsearch-aggregation-pathhierarchy/releases/download/v7.17.28.0/pathhierarchy-aggregation-7.17.28.0.zip`
 
 Build
 -----
+
+Built with Java 17 and Gradle 8.10.2.
+
+The first 3 digits of plugin version is Elasticsearch versioning. The last digit is used for plugin versioning under an elasticsearch version.
 
 Development Environment Setup
 ------------
@@ -31,11 +36,15 @@ OR
 
 `./gradlew assemble` (to avoid tests)
 
+In case you have to upgrade Gradle, you can do it with `./gradlew wrapper --gradler-version x.y.z`.
+
 Then the following command will start a dockerized ES and will install the previously built plugin:
 
-`
-docker-compose up
-`
+```
+docker compose up
+```
+
+Check the Elasticsearch instance at `localhost:9200` and the plugin version with `localhost:9200/_cat/plugins`.
 
 
 > NOTE: In `docker-compose.yml` you can uncomment the debug env and attach a REMOTE JVM on `*:5005` to debug the plugin.
@@ -300,16 +309,6 @@ GET /calendar/_search?size=0
 }
 
 ```
-
-Installation
-------------
-
-Built with Java 17.
-
-The first 3 digits of plugin version is Elasticsearch versioning. The last digit is used for plugin versioning under an elasticsearch version.
-
-To install it, launch this command in Elasticsearch directory replacing the url with a release suiting your case (please check available releases [here](https://github.com/opendatasoft/elasticsearch-aggregation-pathhierarchy/releases)):
-`./bin/elasticsearch-plugin install https://github.com/opendatasoft/elasticsearch-aggregation-pathhierarchy/releases/download/v7.17.6.1/pathhierarchy-aggregation-7.17.6.1.zip`
 
 
 License
