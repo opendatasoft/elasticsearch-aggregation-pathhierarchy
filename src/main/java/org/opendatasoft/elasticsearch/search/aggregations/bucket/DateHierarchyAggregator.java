@@ -1,10 +1,8 @@
 package org.opendatasoft.elasticsearch.search.aggregations.bucket;
 
-import org.apache.lucene.index.LeafReaderContext;
 import org.apache.lucene.index.SortedNumericDocValues;
 import org.apache.lucene.util.BytesRef;
 import org.elasticsearch.ElasticsearchException;
-import org.elasticsearch.common.Rounding;
 import org.elasticsearch.common.io.stream.StreamInput;
 import org.elasticsearch.common.io.stream.StreamOutput;
 import org.elasticsearch.common.io.stream.Writeable;
@@ -12,6 +10,7 @@ import org.elasticsearch.core.Releasables;
 import org.elasticsearch.common.util.BytesRefHash;
 import org.elasticsearch.xcontent.ToXContentFragment;
 import org.elasticsearch.xcontent.XContentBuilder;
+import org.elasticsearch.search.aggregations.AggregationExecutionContext;
 import org.elasticsearch.search.aggregations.Aggregator;
 import org.elasticsearch.search.aggregations.AggregatorFactories;
 import org.elasticsearch.search.aggregations.BucketOrder;
@@ -154,11 +153,11 @@ public class DateHierarchyAggregator extends BucketsAggregator {
      * The LeafBucketCollector is a "Per-leaf bucket collector". It collects docs for the account of buckets.
      */
     @Override
-    public LeafBucketCollector getLeafCollector(LeafReaderContext ctx, LeafBucketCollector sub) throws IOException {
+    public LeafBucketCollector getLeafCollector(AggregationExecutionContext ctx, LeafBucketCollector sub) throws IOException {
         if (valuesSource == null) {
             return LeafBucketCollector.NO_OP_COLLECTOR;
         }
-        final SortedNumericDocValues values = valuesSource.longValues(ctx);
+        final SortedNumericDocValues values = valuesSource.longValues(ctx.getLeafReaderContext());
 
         return new LeafBucketCollectorBase(sub, values) {
 
