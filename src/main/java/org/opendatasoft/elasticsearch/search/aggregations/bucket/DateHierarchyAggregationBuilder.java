@@ -1,6 +1,7 @@
 package org.opendatasoft.elasticsearch.search.aggregations.bucket;
 
-import org.elasticsearch.Version;
+import org.elasticsearch.TransportVersion;
+import org.elasticsearch.TransportVersions;
 import org.elasticsearch.xcontent.ParseField;
 import org.elasticsearch.common.Rounding;
 import org.elasticsearch.common.io.stream.StreamInput;
@@ -41,6 +42,10 @@ import static java.util.Collections.unmodifiableMap;
  * The builder of the aggregatorFactory. Also implements the parsing of the request.
  */
 public class DateHierarchyAggregationBuilder extends ValuesSourceAggregationBuilder<DateHierarchyAggregationBuilder> {
+    @Override
+    public TransportVersion getMinimalSupportedVersion() {
+        return TransportVersions.V_8_0_0;
+    }
     public static final String NAME = "date_hierarchy";
     public static final ValuesSourceRegistry.RegistryKey<DateHierarchyAggregationSupplier> REGISTRY_KEY =
             new ValuesSourceRegistry.RegistryKey<>(NAME, DateHierarchyAggregationSupplier.class);
@@ -135,8 +140,8 @@ public class DateHierarchyAggregationBuilder extends ValuesSourceAggregationBuil
     public static final ObjectParser<DateHierarchyAggregationBuilder, String> PARSER =
             ObjectParser.fromBuilder(NAME, DateHierarchyAggregationBuilder::new);
     static {
-
-        ValuesSourceAggregationBuilder.declareFields(PARSER, true, true, true);
+        // ES 8.x introduces field validation. Setting timezoneAware to false to avoid duplication of the timezone field
+        ValuesSourceAggregationBuilder.declareFields(PARSER, true, true, false);
 
         PARSER.declareString(DateHierarchyAggregationBuilder::interval, INTERVAL_FIELD);
 
@@ -176,7 +181,7 @@ public class DateHierarchyAggregationBuilder extends ValuesSourceAggregationBuil
     }
 
     @Override
-    protected boolean serializeTargetValueType(Version version) {
+    protected boolean serializeTargetValueType(TransportVersion version) {
         return true;
     }
 
@@ -408,8 +413,5 @@ public class DateHierarchyAggregationBuilder extends ValuesSourceAggregationBuil
     public String getType() {
         return NAME;
     }
-
-    @Override
-    protected ValuesSourceRegistry.RegistryKey<?> getRegistryKey() { return REGISTRY_KEY; }
 }
 

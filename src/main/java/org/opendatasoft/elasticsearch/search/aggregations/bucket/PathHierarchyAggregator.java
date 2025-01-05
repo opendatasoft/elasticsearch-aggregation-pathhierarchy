@@ -12,6 +12,7 @@ import org.elasticsearch.common.util.BytesRefHash;
 import org.elasticsearch.xcontent.ToXContentFragment;
 import org.elasticsearch.xcontent.XContentBuilder;
 import org.elasticsearch.index.fielddata.SortedBinaryDocValues;
+import org.elasticsearch.search.aggregations.AggregationExecutionContext;
 import org.elasticsearch.search.aggregations.Aggregator;
 import org.elasticsearch.search.aggregations.AggregatorFactories;
 import org.elasticsearch.search.aggregations.BucketOrder;
@@ -157,11 +158,11 @@ public class PathHierarchyAggregator extends BucketsAggregator {
      * The LeafBucketCollector is a "Per-leaf bucket collector". It collects docs for the account of buckets.
      */
     @Override
-    public LeafBucketCollector getLeafCollector(LeafReaderContext ctx, LeafBucketCollector sub) throws IOException {
+    public LeafBucketCollector getLeafCollector(AggregationExecutionContext ctx, LeafBucketCollector sub) throws IOException {
         if (valuesSource == null) {
             return LeafBucketCollector.NO_OP_COLLECTOR;
         }
-        final SortedBinaryDocValues values = valuesSource.bytesValues(ctx);
+        final SortedBinaryDocValues values = valuesSource.bytesValues(ctx.getLeafReaderContext());
         return new LeafBucketCollectorBase(sub, values) {
             final BytesRefBuilder previous = new BytesRefBuilder();
             /**

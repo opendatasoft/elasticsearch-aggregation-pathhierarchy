@@ -15,7 +15,7 @@ This is a multi bucket aggregation.
 Installation
 ------------
 
-`bin/plugin --install path_hierarchy --url "https://github.com/opendatasoft/elasticsearch-aggregation-pathhierarchy/releases/download/v7.17.6.1/pathhierarchy-aggregation-7.17.6.1.zip"`
+`bin/plugin --install path_hierarchy --url "https://github.com/opendatasoft/elasticsearch-aggregation-pathhierarchy/releases/download/v8.15.2.1/pathhierarchy-aggregation-8.15.2.1.zip"`
 
 Build
 -----
@@ -309,7 +309,7 @@ Built with Java 17.
 The first 3 digits of plugin version is Elasticsearch versioning. The last digit is used for plugin versioning under an elasticsearch version.
 
 To install it, launch this command in Elasticsearch directory replacing the url with a release suiting your case (please check available releases [here](https://github.com/opendatasoft/elasticsearch-aggregation-pathhierarchy/releases)):
-`./bin/elasticsearch-plugin install https://github.com/opendatasoft/elasticsearch-aggregation-pathhierarchy/releases/download/v7.17.6.1/pathhierarchy-aggregation-7.17.6.1.zip`
+`./bin/elasticsearch-plugin install https://github.com/opendatasoft/elasticsearch-aggregation-pathhierarchy/releases/download/v8.15.2.1/pathhierarchy-aggregation-8.15.2.1.zip`
 
 
 License
