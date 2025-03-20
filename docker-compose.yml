@@ -10,6 +10,7 @@ services:
       args:
         ES_VERSION: ${ES_VERSION}
         PLUGIN_VERSION: ${PLUGIN_VERSION}
+        PLUGIN_FILENAME: pathhierarchy-aggregation-${PLUGIN_VERSION}.zip
     environment:
       - discovery.type=single-node
       # NO DEBUG
