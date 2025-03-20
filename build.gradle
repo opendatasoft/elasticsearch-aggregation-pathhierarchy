@@ -22,6 +22,7 @@ apply plugin: 'idea'
 apply plugin: 'elasticsearch.esplugin'
 apply plugin: 'elasticsearch.yaml-rest-test'
 
+
 esplugin {
     name 'pathhierarchy-aggregation'
     description 'Return a path hierarchy aggregation'
@@ -30,8 +31,17 @@ esplugin {
     noticeFile = rootProject.file('README.md')
 }
 
+
 dependencies {
     implementation "org.elasticsearch:elasticsearch:${es_version}"
     yamlRestTestImplementation "org.elasticsearch.test:framework:${es_version}"
     yamlRestTestImplementation "org.apache.logging.log4j:log4j-core:2.17.1"
+}
+
+tasks.named("yamlRestTest").configure {
+  systemProperty 'tests.security.manager', 'false'
+}
+
+tasks.named("test").configure {
+  systemProperty 'tests.security.manager', 'false'
 }

@@ -1,5 +1,3 @@
-version: "3.7"
-
 networks:
   es-network:
 
@@ -12,18 +10,18 @@ services:
     environment:
       - discovery.type=single-node
       # NO DEBUG
-      # - ES_JAVA_OPTS=-Xms512m -Xmx512m
+      - ES_JAVA_OPTS=-Xms512m -Xmx512m
       # DEBUG
-      - ES_JAVA_OPTS=-Xms512m -Xmx512m -agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=*:5005
+      # - ES_JAVA_OPTS=-Xms512m -Xmx512m -agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=*:5005
     ports:
       - "9200:9200"
       # DEBUG
-      - "5005:5005"
+      # - "5005:5005"
     networks:
       - es-network
 
   kibana:
-    image: docker.elastic.co/kibana/kibana:7.17.5
+    image: docker.elastic.co/kibana/kibana:7.17.24
     environment:
       ELASTICSEARCH_HOSTS: http://elasticsearch-plugin-debug:9200/
     ports:
