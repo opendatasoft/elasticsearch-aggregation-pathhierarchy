@@ -25,6 +25,17 @@ Built with Java 17 and Gradle 8.10.2.
 
 The first 3 digits of plugin version is Elasticsearch versioning. The last digit is used for plugin versioning under an elasticsearch version.
 
+
+Upgrade the plugin
+------------
+
+In order to upgrade the plugin, one can simply run for example `./prepare-version.sh 7.17.28`. It will:
+- fetch dependencies versions form Elasticsearch internals
+- upgrade the right configuration files
+- build the .zip module inside /build/distributions/ using gradle
+
+
+
 Development Environment Setup
 ------------
 
