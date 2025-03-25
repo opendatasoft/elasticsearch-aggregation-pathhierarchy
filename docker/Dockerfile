@@ -1,4 +1,12 @@
-FROM docker.elastic.co/elasticsearch/elasticsearch:7.17.28 AS elasticsearch-plugin-debug
+ARG ES_VERSION
+ARG PLUGIN_FILENAME
 
-COPY /build/distributions/pathhierarchy-aggregation-7.17.28.0.zip /tmp/pathhierarchy-aggregation-7.17.28.0.zip
-RUN ./bin/elasticsearch-plugin install file:/tmp/pathhierarchy-aggregation-7.17.28.0.zip
+FROM docker.elastic.co/elasticsearch/elasticsearch:${ES_VERSION} AS elasticsearch-plugin-debug
+
+COPY build/distributions/${PLUGIN_FILENAME} /tmp/${PLUGIN_FILENAME}
+
+# mandatory because docker ARG is scoped to stage (forgotten after the FROM scope above...!)
+ARG PLUGIN_FILENAME
+# madantory because ARGS cannot be used inside RUN shell
+ENV PLUGIN_FILENAME=${PLUGIN_FILENAME}
+RUN ./bin/elasticsearch-plugin install --batch file:/tmp/${PLUGIN_FILENAME}
