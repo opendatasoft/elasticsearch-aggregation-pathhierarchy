@@ -31,8 +31,10 @@ Upgrade the plugin
 
 In order to upgrade the plugin, one can simply run for example `./prepare-version.sh 7.17.28`. It will:
 - fetch dependencies versions form Elasticsearch internals
-- upgrade the right configuration files
-- build the .zip module inside /build/distributions/ using gradle
+- upgrade the configuration files
+
+You can then run `./build.sh` that will build the plugin in a docker container using gradle.
+If successful, the plugin will be available in `./build/distributions/` (under the name `pathhierarchy-aggregation-7.17.28.0.zip` in this example).
 
 
 
