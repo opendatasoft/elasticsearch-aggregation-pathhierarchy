@@ -1,31 +1,30 @@
 package org.opendatasoft.elasticsearch.search.aggregations.bucket;
 
 import org.elasticsearch.Version;
-import org.elasticsearch.xcontent.ParseField;
 import org.elasticsearch.common.io.stream.StreamInput;
 import org.elasticsearch.common.io.stream.StreamOutput;
-import org.elasticsearch.xcontent.ObjectParser;
-import org.elasticsearch.xcontent.XContentBuilder;
-import org.elasticsearch.xcontent.XContentParser;
-import org.elasticsearch.search.aggregations.support.AggregationContext;
 import org.elasticsearch.search.aggregations.AggregationBuilder;
 import org.elasticsearch.search.aggregations.AggregatorFactories;
-import org.elasticsearch.search.aggregations.AggregatorFactory;
 import org.elasticsearch.search.aggregations.AggregatorFactories.Builder;
+import org.elasticsearch.search.aggregations.AggregatorFactory;
 import org.elasticsearch.search.aggregations.BucketOrder;
 import org.elasticsearch.search.aggregations.InternalOrder;
+import org.elasticsearch.search.aggregations.support.AggregationContext;
 import org.elasticsearch.search.aggregations.support.CoreValuesSourceType;
 import org.elasticsearch.search.aggregations.support.ValuesSourceAggregationBuilder;
 import org.elasticsearch.search.aggregations.support.ValuesSourceAggregatorFactory;
 import org.elasticsearch.search.aggregations.support.ValuesSourceConfig;
 import org.elasticsearch.search.aggregations.support.ValuesSourceRegistry;
 import org.elasticsearch.search.aggregations.support.ValuesSourceType;
+import org.elasticsearch.xcontent.ObjectParser;
+import org.elasticsearch.xcontent.ParseField;
+import org.elasticsearch.xcontent.XContentBuilder;
+import org.elasticsearch.xcontent.XContentParser;
 
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-
 
 /**
  * The builder of the aggregatorFactory. Also implements the parsing of the request.
@@ -33,7 +32,7 @@ import java.util.Objects;
 public class PathHierarchyAggregationBuilder extends ValuesSourceAggregationBuilder<PathHierarchyAggregationBuilder> {
     public static final String NAME = "path_hierarchy";
     public static final ValuesSourceRegistry.RegistryKey<PathHierarchyAggregationSupplier> REGISTRY_KEY =
-            new ValuesSourceRegistry.RegistryKey<>(NAME, PathHierarchyAggregationSupplier.class);
+        new ValuesSourceRegistry.RegistryKey<>(NAME, PathHierarchyAggregationSupplier.class);
 
     public static final ParseField SEPARATOR_FIELD = new ParseField("separator");
     public static final ParseField MIN_DEPTH_FIELD = new ParseField("min_depth");
@@ -45,10 +44,12 @@ public class PathHierarchyAggregationBuilder extends ValuesSourceAggregationBuil
     public static final ParseField SHARD_SIZE_FIELD = new ParseField("shard_size");
     public static final ParseField MIN_DOC_COUNT_FIELD = new ParseField("min_doc_count");
 
-    public static final PathHierarchyAggregator.BucketCountThresholds DEFAULT_BUCKET_COUNT_THRESHOLDS = new
-            PathHierarchyAggregator.BucketCountThresholds(10, -1);
-    public static final ObjectParser<PathHierarchyAggregationBuilder, String> PARSER =
-            ObjectParser.fromBuilder(NAME, PathHierarchyAggregationBuilder::new);
+    public static final PathHierarchyAggregator.BucketCountThresholds DEFAULT_BUCKET_COUNT_THRESHOLDS =
+        new PathHierarchyAggregator.BucketCountThresholds(10, -1);
+    public static final ObjectParser<PathHierarchyAggregationBuilder, String> PARSER = ObjectParser.fromBuilder(
+        NAME,
+        PathHierarchyAggregationBuilder::new
+    );
     static {
         ValuesSourceAggregationBuilder.declareFields(PARSER, true, true, false);
 
@@ -60,8 +61,7 @@ public class PathHierarchyAggregationBuilder extends ValuesSourceAggregationBuil
         PARSER.declareInt(PathHierarchyAggregationBuilder::size, SIZE_FIELD);
         PARSER.declareLong(PathHierarchyAggregationBuilder::minDocCount, MIN_DOC_COUNT_FIELD);
         PARSER.declareInt(PathHierarchyAggregationBuilder::shardSize, SHARD_SIZE_FIELD);
-        PARSER.declareObjectArray(PathHierarchyAggregationBuilder::order, (p, c) -> InternalOrder.Parser.parseOrderParam(p),
-                ORDER_FIELD);
+        PARSER.declareObjectArray(PathHierarchyAggregationBuilder::order, (p, c) -> InternalOrder.Parser.parseOrderParam(p), ORDER_FIELD);
     }
 
     public static AggregationBuilder parse(String aggregationName, XContentParser parser) throws IOException {
@@ -84,8 +84,8 @@ public class PathHierarchyAggregationBuilder extends ValuesSourceAggregationBuil
     private int depth = -1;
     private BucketOrder order = BucketOrder.compound(BucketOrder.count(false)); // automatically adds tie-breaker key asc order
     private PathHierarchyAggregator.BucketCountThresholds bucketCountThresholds = new PathHierarchyAggregator.BucketCountThresholds(
-            DEFAULT_BUCKET_COUNT_THRESHOLDS);
-
+        DEFAULT_BUCKET_COUNT_THRESHOLDS
+    );
 
     private PathHierarchyAggregationBuilder(String name) {
         super(name);
@@ -111,8 +111,7 @@ public class PathHierarchyAggregationBuilder extends ValuesSourceAggregationBuil
         order = InternalOrder.Streams.readOrder(in);
     }
 
-    private PathHierarchyAggregationBuilder(PathHierarchyAggregationBuilder clone, Builder factoriesBuilder,
-                                           Map<String, Object> metadata) {
+    private PathHierarchyAggregationBuilder(PathHierarchyAggregationBuilder clone, Builder factoriesBuilder, Map<String, Object> metadata) {
         super(clone, factoriesBuilder, metadata);
         separator = clone.separator;
         minDepth = clone.minDepth;
@@ -180,7 +179,7 @@ public class PathHierarchyAggregationBuilder extends ValuesSourceAggregationBuil
         if (order == null) {
             throw new IllegalArgumentException("[order] must not be null: [" + name + "]");
         }
-        if(order instanceof InternalOrder.CompoundOrder || InternalOrder.isKeyOrder(order)) {
+        if (order instanceof InternalOrder.CompoundOrder || InternalOrder.isKeyOrder(order)) {
             this.order = order; // if order already contains a tie-breaker we are good to go
         } else { // otherwise add a tie-breaker by using a compound order
             this.order = BucketOrder.compound(order);
@@ -196,7 +195,6 @@ public class PathHierarchyAggregationBuilder extends ValuesSourceAggregationBuil
         order(orders.size() > 1 ? BucketOrder.compound(orders) : orders.get(0));
         return this;
     }
-
 
     /**
      * Sets the size - indicating how many term buckets should be returned
@@ -215,7 +213,8 @@ public class PathHierarchyAggregationBuilder extends ValuesSourceAggregationBuil
     public PathHierarchyAggregationBuilder minDocCount(long minDocCount) {
         if (minDocCount < 0) {
             throw new IllegalArgumentException(
-                    "[minDocCount] must be greater than or equal to 0. Found [" + minDocCount + "] in [" + name + "]");
+                "[minDocCount] must be greater than or equal to 0. Found [" + minDocCount + "] in [" + name + "]"
+            );
         }
         this.minDocCount = minDocCount;
         return this;
@@ -241,8 +240,7 @@ public class PathHierarchyAggregationBuilder extends ValuesSourceAggregationBuil
      */
     public PathHierarchyAggregationBuilder shardSize(int shardSize) {
         if (shardSize <= 0) {
-            throw new IllegalArgumentException(
-                    "[shardSize] must be greater than 0. Found [" + shardSize + "] in [" + name + "]");
+            throw new IllegalArgumentException("[shardSize] must be greater than 0. Found [" + shardSize + "] in [" + name + "]");
         }
         bucketCountThresholds.setShardSize(shardSize);
         return this;
@@ -256,38 +254,40 @@ public class PathHierarchyAggregationBuilder extends ValuesSourceAggregationBuil
     }
 
     @Override
-    protected ValuesSourceAggregatorFactory innerBuild(AggregationContext context,
-                                                       ValuesSourceConfig config,
-                                                       AggregatorFactory parent,
-                                                       AggregatorFactories.Builder subFactoriesBuilder) throws IOException {
+    protected ValuesSourceAggregatorFactory innerBuild(
+        AggregationContext context,
+        ValuesSourceConfig config,
+        AggregatorFactory parent,
+        AggregatorFactories.Builder subFactoriesBuilder
+    ) throws IOException {
 
-
-        if (minDepth > maxDepth)
-            throw new IllegalArgumentException("[minDepth] (" + minDepth + ") must not be greater than [maxDepth] (" +
-                    maxDepth + ")");
+        if (minDepth > maxDepth) throw new IllegalArgumentException(
+            "[minDepth] (" + minDepth + ") must not be greater than [maxDepth] (" + maxDepth + ")"
+        );
 
         if (depth >= 0) {
-            if (minDepth > depth)
-                throw new IllegalArgumentException("[minDepth] (" + minDepth + ") must not be greater than [depth] (" +
-                        depth + ")");
+            if (minDepth > depth) throw new IllegalArgumentException(
+                "[minDepth] (" + minDepth + ") must not be greater than [depth] (" + depth + ")"
+            );
             minDepth = depth;
             maxDepth = depth;
         }
 
         return new PathHierarchyAggregatorFactory(
-                name,
-                config,
-                separator,
-                minDepth,
-                maxDepth,
-                keepBlankPath,
-                order,
-                minDocCount,
-                bucketCountThresholds,
-                context,
-                parent,
-                subFactoriesBuilder,
-                metadata);
+            name,
+            config,
+            separator,
+            minDepth,
+            maxDepth,
+            keepBlankPath,
+            order,
+            minDocCount,
+            bucketCountThresholds,
+            context,
+            parent,
+            subFactoriesBuilder,
+            metadata
+        );
     }
 
     @Override
@@ -332,12 +332,12 @@ public class PathHierarchyAggregationBuilder extends ValuesSourceAggregationBuil
         if (!super.equals(obj)) return false;
         PathHierarchyAggregationBuilder other = (PathHierarchyAggregationBuilder) obj;
         return Objects.equals(separator, other.separator)
-                && Objects.equals(minDepth, other.minDepth)
-                && Objects.equals(maxDepth, other.maxDepth)
-                && Objects.equals(depth, other.depth)
-                && Objects.equals(order, other.order)
-                && Objects.equals(minDocCount, other.minDocCount)
-                && Objects.equals(bucketCountThresholds, other.bucketCountThresholds);
+            && Objects.equals(minDepth, other.minDepth)
+            && Objects.equals(maxDepth, other.maxDepth)
+            && Objects.equals(depth, other.depth)
+            && Objects.equals(order, other.order)
+            && Objects.equals(minDocCount, other.minDocCount)
+            && Objects.equals(bucketCountThresholds, other.bucketCountThresholds);
     }
 
     @Override
@@ -346,6 +346,7 @@ public class PathHierarchyAggregationBuilder extends ValuesSourceAggregationBuil
     }
 
     @Override
-    protected ValuesSourceRegistry.RegistryKey<?> getRegistryKey() { return REGISTRY_KEY; }
+    protected ValuesSourceRegistry.RegistryKey<?> getRegistryKey() {
+        return REGISTRY_KEY;
+    }
 }
-

@@ -1,6 +1,5 @@
 package org.opendatasoft.elasticsearch.search.aggregations.bucket;
 
-
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.Iterator;
@@ -9,7 +8,7 @@ import java.util.NoSuchElementException;
 import java.util.PriorityQueue;
 import java.util.Stack;
 
-public class PathSortedTree<K, T> implements Iterable<T>{
+public class PathSortedTree<K, T> implements Iterable<T> {
 
     private Comparator<? super T> comparator;
     private Node<K, T> root;
@@ -45,12 +44,11 @@ public class PathSortedTree<K, T> implements Iterable<T>{
             if (newChild) {
                 Node<K, T> newNode = new Node<>(k, comparator, element, currentNode);
                 currentNode.children.add(newNode);
-                fullSize ++;
+                fullSize++;
                 break;
             }
         }
     }
-
 
     public List<T> getAsList() {
 
@@ -58,7 +56,7 @@ public class PathSortedTree<K, T> implements Iterable<T>{
 
         Iterator<T> iterator = consumer();
 
-        while (iterator.hasNext()){
+        while (iterator.hasNext()) {
             result.add(iterator.next());
         }
         return result;
@@ -67,7 +65,6 @@ public class PathSortedTree<K, T> implements Iterable<T>{
     public Iterator<T> consumer() {
         return new PathSortedTreeConsumer(root, fullSize);
     }
-
 
     @Override
     public Iterator<T> iterator() {
@@ -92,7 +89,6 @@ public class PathSortedTree<K, T> implements Iterable<T>{
         Comparator<Node<K, T>> getComparator(Comparator<? super T> comparator) {
             return (n1, n2) -> comparator.compare(n1.data, n2.data);
         }
-
 
         public Node(K key, Comparator<? super T> comparator, T data, Node<K, T> parent) {
             this.key = key;
@@ -122,11 +118,11 @@ public class PathSortedTree<K, T> implements Iterable<T>{
 
             Node<K, T> nextNode = current.next();
 
-            if (! nextNode.children.isEmpty()) {
+            if (!nextNode.children.isEmpty()) {
                 iterators.push(current);
                 current = nextNode.children.iterator();
-            } else if (! current.hasNext()){
-                while (! iterators.empty()) {
+            } else if (!current.hasNext()) {
+                while (!iterators.empty()) {
                     current = iterators.pop();
                     if (current.hasNext()) {
                         break;
@@ -153,7 +149,7 @@ public class PathSortedTree<K, T> implements Iterable<T>{
 
         @Override
         public boolean hasNext() {
-            if (size >=0 && currentSize >= size) {
+            if (size >= 0 && currentSize >= size) {
                 return false;
             }
             if (cursor.children.size() > 0) {
@@ -177,8 +173,8 @@ public class PathSortedTree<K, T> implements Iterable<T>{
                 }
             }
             if (nextNode == null) throw new NoSuchElementException();
-            currentSize ++;
-            fullSize --;
+            currentSize++;
+            fullSize--;
             cursor = nextNode;
             return nextNode.data;
 

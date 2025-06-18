@@ -8,10 +8,8 @@ import org.elasticsearch.common.Rounding;
 import org.elasticsearch.common.io.stream.StreamInput;
 import org.elasticsearch.common.io.stream.StreamOutput;
 import org.elasticsearch.common.io.stream.Writeable;
-import org.elasticsearch.core.Releasables;
 import org.elasticsearch.common.util.BytesRefHash;
-import org.elasticsearch.xcontent.ToXContentFragment;
-import org.elasticsearch.xcontent.XContentBuilder;
+import org.elasticsearch.core.Releasables;
 import org.elasticsearch.search.aggregations.Aggregator;
 import org.elasticsearch.search.aggregations.AggregatorFactories;
 import org.elasticsearch.search.aggregations.BucketOrder;
@@ -20,8 +18,10 @@ import org.elasticsearch.search.aggregations.InternalAggregation;
 import org.elasticsearch.search.aggregations.LeafBucketCollector;
 import org.elasticsearch.search.aggregations.LeafBucketCollectorBase;
 import org.elasticsearch.search.aggregations.bucket.BucketsAggregator;
-import org.elasticsearch.search.aggregations.support.ValuesSource;
 import org.elasticsearch.search.aggregations.support.AggregationContext;
+import org.elasticsearch.search.aggregations.support.ValuesSource;
+import org.elasticsearch.xcontent.ToXContentFragment;
+import org.elasticsearch.xcontent.XContentBuilder;
 
 import java.io.IOException;
 import java.util.Arrays;
@@ -31,26 +31,26 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
-
 public class DateHierarchyAggregator extends BucketsAggregator {
 
-    public DateHierarchyAggregator(String name,
-                                   AggregatorFactories factories,
-                                   AggregationContext context,
-                                   ValuesSource.Numeric valuesSource,
-                                   BucketOrder order,
-                                   long minDocCount,
-                                   BucketCountThresholds bucketCountThresholds,
-                                   List<DateHierarchyAggregationBuilder.PreparedRounding> preparedRoundings,
-                                   Aggregator parent,
-                                   CardinalityUpperBound cardinalityUpperBound,
-                                   Map<String,  Object> metadata
+    public DateHierarchyAggregator(
+        String name,
+        AggregatorFactories factories,
+        AggregationContext context,
+        ValuesSource.Numeric valuesSource,
+        BucketOrder order,
+        long minDocCount,
+        BucketCountThresholds bucketCountThresholds,
+        List<DateHierarchyAggregationBuilder.PreparedRounding> preparedRoundings,
+        Aggregator parent,
+        CardinalityUpperBound cardinalityUpperBound,
+        Map<String, Object> metadata
     ) throws IOException {
         super(name, factories, context, parent, cardinalityUpperBound, metadata);
         this.valuesSource = valuesSource;
         this.preparedRoundings = preparedRoundings;
         this.minDocCount = minDocCount;
-        bucketOrds =  new BytesRefHash(1, context.bigArrays());
+        bucketOrds = new BytesRefHash(1, context.bigArrays());
         this.bucketCountThresholds = bucketCountThresholds;
         order.validate(this);
         this.order = order;
@@ -134,8 +134,7 @@ public class DateHierarchyAggregator extends BucketsAggregator {
                 return false;
             }
             DateHierarchyAggregator.BucketCountThresholds other = (DateHierarchyAggregator.BucketCountThresholds) obj;
-            return Objects.equals(requiredSize, other.requiredSize)
-                    && Objects.equals(shardSize, other.shardSize);
+            return Objects.equals(requiredSize, other.requiredSize) && Objects.equals(shardSize, other.shardSize);
         }
     }
 
@@ -171,7 +170,7 @@ public class DateHierarchyAggregator extends BucketsAggregator {
                     for (int i = 0; i < valuesCount; ++i) {
                         long value = values.nextValue();
                         String path = "";
-                        for (DateHierarchyAggregationBuilder.PreparedRounding preparedRounding: preparedRoundings) {
+                        for (DateHierarchyAggregationBuilder.PreparedRounding preparedRounding : preparedRoundings) {
                             long roundedValue = preparedRounding.prepared.round(value);
                             path += preparedRounding.roundingInfo.format.format(roundedValue).toString();
                             long bucketOrd = bucketOrds.add(new BytesRef(path));
@@ -231,25 +230,36 @@ public class DateHierarchyAggregator extends BucketsAggregator {
                 otherHierarchyNodes -= 1;
             }
 
-            results[ordIdx] = new InternalDateHierarchy(name, Arrays.asList(topBucketsPerOrd[ordIdx]), order,
-                    minDocCount, bucketCountThresholds.getRequiredSize(), bucketCountThresholds.getShardSize(),
-                    otherHierarchyNodes, metadata());
+            results[ordIdx] = new InternalDateHierarchy(
+                name,
+                Arrays.asList(topBucketsPerOrd[ordIdx]),
+                order,
+                minDocCount,
+                bucketCountThresholds.getRequiredSize(),
+                bucketCountThresholds.getShardSize(),
+                otherHierarchyNodes,
+                metadata()
+            );
         }
 
         // Build sub-aggregations for pruned buckets
-        buildSubAggsForAllBuckets(
-                topBucketsPerOrd,
-                b -> b.bucketOrd,
-                (b, aggregations) -> b.aggregations = aggregations
-        );
+        buildSubAggsForAllBuckets(topBucketsPerOrd, b -> b.bucketOrd, (b, aggregations) -> b.aggregations = aggregations);
 
         return results;
     }
 
     @Override
     public InternalAggregation buildEmptyAggregation() {
-        return new InternalDateHierarchy(name, null, order, minDocCount, bucketCountThresholds.getRequiredSize(),
-                bucketCountThresholds.getShardSize(), 0, metadata());
+        return new InternalDateHierarchy(
+            name,
+            null,
+            order,
+            minDocCount,
+            bucketCountThresholds.getRequiredSize(),
+            bucketCountThresholds.getShardSize(),
+            0,
+            metadata()
+        );
     }
 
     @Override

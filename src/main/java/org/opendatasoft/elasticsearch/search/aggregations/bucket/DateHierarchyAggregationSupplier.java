@@ -13,15 +13,17 @@ import java.util.Map;
 
 @FunctionalInterface
 public interface DateHierarchyAggregationSupplier {
-    Aggregator build(String name,
-                     AggregatorFactories factories,
-                     BucketOrder order,
-                     List<DateHierarchyAggregationBuilder.RoundingInfo> roundingsInfo,
-                     long minDocCount,
-                     DateHierarchyAggregator.BucketCountThresholds bucketCountThresholds,
-                     ValuesSourceConfig valuesSourceConfig,
-                     SearchContext aggregationContext,
-                     Aggregator parent,
-                     CardinalityUpperBound cardinality,
-                     Map<String, Object> metadata) throws IOException;
+    Aggregator build(
+        String name,
+        AggregatorFactories factories,
+        BucketOrder order,
+        List<DateHierarchyAggregationBuilder.RoundingInfo> roundingsInfo,
+        long minDocCount,
+        DateHierarchyAggregator.BucketCountThresholds bucketCountThresholds,
+        ValuesSourceConfig valuesSourceConfig,
+        SearchContext aggregationContext,
+        Aggregator parent,
+        CardinalityUpperBound cardinality,
+        Map<String, Object> metadata
+    ) throws IOException;
 }

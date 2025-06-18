@@ -14,20 +14,18 @@ public class PathHierarchyAggregation extends Plugin implements SearchPlugin {
     public ArrayList<SearchPlugin.AggregationSpec> getAggregations() {
         ArrayList<SearchPlugin.AggregationSpec> r = new ArrayList<>();
         r.add(
-                new AggregationSpec(
-                        PathHierarchyAggregationBuilder.NAME,
-                        PathHierarchyAggregationBuilder::new,
-                        PathHierarchyAggregationBuilder.PARSER)
-                        .addResultReader(InternalPathHierarchy::new)
-                        .setAggregatorRegistrar(PathHierarchyAggregationBuilder::registerAggregators)
+            new AggregationSpec(
+                PathHierarchyAggregationBuilder.NAME,
+                PathHierarchyAggregationBuilder::new,
+                PathHierarchyAggregationBuilder.PARSER
+            ).addResultReader(InternalPathHierarchy::new).setAggregatorRegistrar(PathHierarchyAggregationBuilder::registerAggregators)
         );
         r.add(
-                new AggregationSpec(
-                        DateHierarchyAggregationBuilder.NAME,
-                        DateHierarchyAggregationBuilder::new,
-                        DateHierarchyAggregationBuilder.PARSER)
-                        .addResultReader(InternalDateHierarchy::new)
-                        .setAggregatorRegistrar(DateHierarchyAggregationBuilder::registerAggregators)
+            new AggregationSpec(
+                DateHierarchyAggregationBuilder.NAME,
+                DateHierarchyAggregationBuilder::new,
+                DateHierarchyAggregationBuilder.PARSER
+            ).addResultReader(InternalDateHierarchy::new).setAggregatorRegistrar(DateHierarchyAggregationBuilder::registerAggregators)
         );
         return r;
     }
