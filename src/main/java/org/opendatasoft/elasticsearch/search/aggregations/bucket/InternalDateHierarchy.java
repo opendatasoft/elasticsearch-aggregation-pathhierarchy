@@ -3,7 +3,8 @@ package org.opendatasoft.elasticsearch.search.aggregations.bucket;
 import org.apache.lucene.util.BytesRef;
 import org.elasticsearch.common.io.stream.StreamInput;
 import org.elasticsearch.common.io.stream.StreamOutput;
-import org.elasticsearch.search.aggregations.Aggregations;
+import org.elasticsearch.search.aggregations.AggregationReduceContext;
+import org.elasticsearch.search.aggregations.AggregatorReducer;
 import org.elasticsearch.search.aggregations.BucketOrder;
 import org.elasticsearch.search.aggregations.InternalAggregation;
 import org.elasticsearch.search.aggregations.InternalAggregations;
@@ -15,11 +16,13 @@ import org.elasticsearch.xcontent.XContentBuilder;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.TreeMap;
 
 /**
  * An internal implementation of {@link InternalMultiBucketAggregation}
@@ -28,11 +31,67 @@ import java.util.Objects;
  */
 public class InternalDateHierarchy extends InternalMultiBucketAggregation<InternalDateHierarchy, InternalDateHierarchy.InternalBucket> {
 
+    @Override
+    protected AggregatorReducer getLeaderReducer(AggregationReduceContext reduceContext, int size) {
+        Map<BytesRef, List<InternalBucket>> buckets = new LinkedHashMap<>();
+
+        return new AggregatorReducer() {
+            private long otherHierarchyNodes = 0;
+
+            @Override
+            public void accept(InternalAggregation aggregation) {
+                InternalDateHierarchy dateHierarchy = (InternalDateHierarchy) aggregation;
+
+                otherHierarchyNodes += dateHierarchy.getSumOtherHierarchyNodes();
+
+                for (InternalBucket bucket : dateHierarchy.buckets) {
+                    List<InternalBucket> existingBuckets = buckets.get(bucket.key);
+                    if (existingBuckets == null) {
+                        existingBuckets = new ArrayList<>(size);
+                        buckets.put(bucket.key, existingBuckets);
+                    }
+                    existingBuckets.add(bucket);
+                }
+            }
+
+            @Override
+            public InternalAggregation get() {
+                final int size = !reduceContext.isFinalReduce() ? buckets.size() : Math.min(requiredSize, buckets.size());
+                PathSortedTree<String, InternalBucket> ordered = new PathSortedTree<>(order.comparator(), size);
+
+                for (List<InternalBucket> sameTermBuckets : buckets.values()) {
+                    final InternalBucket b = reduceBucket(sameTermBuckets, reduceContext);
+                    if (b.getDocCount() >= minDocCount || !reduceContext.isFinalReduce()) {
+                        reduceContext.consumeBucketsAndMaybeBreak(1);
+                        ordered.add(b.paths, b);
+                    } else {
+                        reduceContext.consumeBucketsAndMaybeBreak(-countInnerBucket(b));
+                    }
+                }
+
+                long sum_other_hierarchy_nodes = ordered.getFullSize() - size + otherHierarchyNodes;
+
+                return new InternalDateHierarchy(
+                    getName(),
+                    ordered.getAsList(),
+                    order,
+                    minDocCount,
+                    requiredSize,
+                    shardSize,
+                    sum_other_hierarchy_nodes,
+                    getMetadata()
+                );
+            }
+        };
+    }
+
     /**
      * The bucket class of InternalDateHierarchy.
      * @see MultiBucketsAggregation.Bucket
      */
-    public static class InternalBucket extends InternalMultiBucketAggregation.InternalBucket implements KeyComparable<InternalBucket> {
+    public static class InternalBucket extends InternalMultiBucketAggregation.InternalBucketWritable
+        implements
+            KeyComparable<InternalBucket> {
 
         BytesRef key;
         String name;
@@ -104,11 +163,10 @@ public class InternalDateHierarchy extends InternalMultiBucketAggregation<Intern
         }
 
         @Override
-        public Aggregations getAggregations() {
+        public InternalAggregations getAggregations() {
             return aggregations;
         }
 
-        @Override
         public XContentBuilder toXContent(XContentBuilder builder, Params params) throws IOException {
             builder.startObject();
             builder.field(CommonFields.DOC_COUNT.getPreferredName(), docCount);
@@ -214,62 +272,7 @@ public class InternalDateHierarchy extends InternalMultiBucketAggregation<Intern
         return buckets;
     }
 
-    /**
-     * Reduces the given aggregations to a single one and returns it.
-     */
-    @Override
-    public InternalDateHierarchy reduce(List<InternalAggregation> aggregations, ReduceContext reduceContext) {
-        Map<BytesRef, List<InternalBucket>> buckets = null;
-        long otherHierarchyNodes = 0;
-
-        // extract buckets from aggregations
-        for (InternalAggregation aggregation : aggregations) {
-            InternalDateHierarchy dateHierarchy = (InternalDateHierarchy) aggregation;
-            if (buckets == null) {
-                buckets = new LinkedHashMap<>();
-            }
-
-            otherHierarchyNodes += dateHierarchy.getSumOtherHierarchyNodes();
-
-            for (InternalBucket bucket : dateHierarchy.buckets) {
-                List<InternalBucket> existingBuckets = buckets.get(bucket.key);
-                if (existingBuckets == null) {
-                    existingBuckets = new ArrayList<>(aggregations.size());
-                    buckets.put(bucket.key, existingBuckets);
-                }
-                existingBuckets.add(bucket);
-            }
-        }
-
-        // reduce and sort buckets depending of ordering rules
-        final int size = !reduceContext.isFinalReduce() ? buckets.size() : Math.min(requiredSize, buckets.size());
-        PathSortedTree<String, InternalBucket> ordered = new PathSortedTree<>(order.comparator(), size);
-        for (List<InternalBucket> sameTermBuckets : buckets.values()) {
-
-            final InternalBucket b = reduceBucket(sameTermBuckets, reduceContext);
-            if (b.getDocCount() >= minDocCount || !reduceContext.isFinalReduce()) {
-                reduceContext.consumeBucketsAndMaybeBreak(1);
-                ordered.add(b.paths, b);
-            } else {
-                reduceContext.consumeBucketsAndMaybeBreak(-countInnerBucket(b));
-            }
-        }
-
-        long sum_other_hierarchy_nodes = ordered.getFullSize() - size + otherHierarchyNodes;
-        return new InternalDateHierarchy(
-            getName(),
-            ordered.getAsList(),
-            order,
-            minDocCount,
-            requiredSize,
-            shardSize,
-            sum_other_hierarchy_nodes,
-            getMetadata()
-        );
-    }
-
-    @Override
-    protected InternalBucket reduceBucket(List<InternalBucket> buckets, ReduceContext context) {
+    protected InternalBucket reduceBucket(List<InternalBucket> buckets, AggregationReduceContext context) {
         List<InternalAggregations> aggregationsList = new ArrayList<>(buckets.size());
         InternalBucket reduced = null;
         for (InternalBucket bucket : buckets) {

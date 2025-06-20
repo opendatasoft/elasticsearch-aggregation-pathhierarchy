@@ -4,7 +4,6 @@ import org.apache.lucene.index.LeafReaderContext;
 import org.apache.lucene.util.ArrayUtil;
 import org.apache.lucene.util.BytesRef;
 import org.apache.lucene.util.BytesRefBuilder;
-import org.apache.lucene.util.FutureArrays;
 import org.elasticsearch.index.fielddata.SortedBinaryDocValues;
 import org.elasticsearch.index.fielddata.SortingBinaryDocValues;
 import org.elasticsearch.search.aggregations.Aggregator;
@@ -25,6 +24,7 @@ import org.elasticsearch.search.aggregations.support.ValuesSourceRegistry;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Map;
 
 /**
@@ -191,7 +191,7 @@ class PathHierarchyAggregatorFactory extends ValuesSourceAggregatorFactory {
                     for (int offset = 0; offset < val.length; offset++) {
                         // it is a separator
                         if (val.length - offset >= separator.length
-                            && FutureArrays.equals(
+                            && Arrays.equals(
                                 separator.bytes,
                                 separator.offset,
                                 separator.offset + separator.length,
