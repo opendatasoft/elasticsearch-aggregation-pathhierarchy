@@ -63,7 +63,7 @@ public class DateHierarchyAggregationBuilder extends ValuesSourceAggregationBuil
         dateFieldUnits.put("months", new IntervalConfig(Rounding.DateTimeUnit.MONTH_OF_YEAR, "MM"));
         dateFieldUnits.put("days", new IntervalConfig(Rounding.DateTimeUnit.DAY_OF_MONTH, "dd"));
         dateFieldUnits.put("hours", new IntervalConfig(Rounding.DateTimeUnit.HOUR_OF_DAY, "hh"));
-        dateFieldUnits.put("minutes", new IntervalConfig(Rounding.DateTimeUnit.MINUTES_OF_HOUR, "mm"));
+        dateFieldUnits.put("minutes", new IntervalConfig(Rounding.DateTimeUnit.MINUTE_OF_HOUR, "mm"));
         dateFieldUnits.put("seconds", new IntervalConfig(Rounding.DateTimeUnit.SECOND_OF_MINUTE, "ss"));
         INTERVAL_CONFIG = unmodifiableMap(dateFieldUnits);
     }
