@@ -74,3 +74,10 @@ tasks.named("yamlRestTest").configure {
 tasks.named("test").configure {
   systemProperty 'tests.security.manager', 'false'
 }
+
+// Make sure the ES distribution used for rest tests is the "complete" variant
+testClusters.configureEach {
+    testDistribution = 'DEFAULT'
+    // disable security to disable failing warnings
+    setting 'xpack.security.enabled', 'false'
+}
