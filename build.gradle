@@ -1,6 +1,9 @@
+/*
+Gradle build file for development building, testing, and packaging.
+*/
+
 buildscript {
     repositories {
-        mavenLocal()
         mavenCentral()
     }
 
@@ -19,6 +22,30 @@ repositories {
     mavenCentral()
 }
 
+group = 'org.elasticsearch.plugin'
+version = "${plugin_version}"
+
+apply plugin: 'java'
+apply plugin: 'idea'
+apply plugin: 'elasticsearch.esplugin'
+apply plugin: 'elasticsearch.yaml-rest-test'
+
+esplugin {
+    name 'pathhierarchy-aggregation'
+    description 'Return a path hierarchy aggregation'
+    classname 'org.opendatasoft.elasticsearch.plugin.PathHierarchyAggregation'
+    licenseFile = rootProject.file('LICENSE')
+    noticeFile = rootProject.file('README.md')
+}
+
+def versions = org.elasticsearch.gradle.VersionProperties.versions
+dependencies {
+    implementation "org.elasticsearch:elasticsearch:${es_version}"
+    yamlRestTestImplementation "org.elasticsearch.test:framework:${es_version}"
+    yamlRestTestImplementation "org.elasticsearch.test:yaml-rest-runner:${es_version}"
+    yamlRestTestImplementation "org.apache.logging.log4j:log4j-core:${versions.log4j}"
+}
+
 // add -Xlint:deprecation to check the Elasticsearch deprecation warning at compile-time
 allprojects {
     gradle.projectsEvaluated {
@@ -28,16 +55,6 @@ allprojects {
         }
     }
 }
-
-group = 'org.elasticsearch.plugin'
-version = "${plugin_version}"
-
-def versions = org.elasticsearch.gradle.VersionProperties.versions
-
-apply plugin: 'java'
-apply plugin: 'idea'
-apply plugin: 'elasticsearch.esplugin'
-apply plugin: 'elasticsearch.yaml-rest-test'
 
 // automatic formatting configuration (the same configuration as elasticsearch)
 spotless {
@@ -51,33 +68,16 @@ spotless {
 
 check.dependsOn spotlessCheck
 
-esplugin {
-    name 'pathhierarchy-aggregation'
-    description 'Return a path hierarchy aggregation'
-    classname 'org.opendatasoft.elasticsearch.plugin.PathHierarchyAggregation'
-    licenseFile = rootProject.file('LICENSE')
-    noticeFile = rootProject.file('README.md')
-}
-
-
-dependencies {
-    implementation "org.elasticsearch:elasticsearch:${es_version}"
-    yamlRestTestImplementation "org.elasticsearch.test:framework:${es_version}"
-    yamlRestTestImplementation "org.elasticsearch.test:yaml-rest-runner:${es_version}"
-    yamlRestTestImplementation "org.apache.logging.log4j:log4j-core:${versions.log4j}"
-}
-
-tasks.named("yamlRestTest").configure {
-  systemProperty 'tests.security.manager', 'false'
-}
-
-tasks.named("test").configure {
-  systemProperty 'tests.security.manager', 'false'
-}
-
-// Make sure the ES distribution used for rest tests is the "complete" variant
 testClusters.configureEach {
+    // Make sure the ES distribution used for rest tests is the "complete" variant
     testDistribution = 'DEFAULT'
-    // disable security to disable failing warnings
+
+    // Disable security (avoids annoying warnings/failures with xpack features)
     setting 'xpack.security.enabled', 'false'
+
+    // Logging levels for debugging: logs are located in build/testclusters/runTask-0/logs/
+    setting 'logger._root', 'DEBUG'
+    setting 'logger.org.elasticsearch.plugins', 'DEBUG'
+    setting 'logger.org.elasticsearch.cluster', 'DEBUG'
+    setting 'logger.org.elasticsearch.cluster.metadata', 'TRACE'
 }
