@@ -10,11 +10,11 @@ import org.elasticsearch.search.aggregations.InternalOrder;
 import org.elasticsearch.search.aggregations.NonCollectingAggregator;
 import org.elasticsearch.search.aggregations.bucket.BucketUtils;
 import org.elasticsearch.search.aggregations.support.AggregationContext;
+import org.elasticsearch.search.aggregations.support.CoreValuesSourceType;
+import org.elasticsearch.search.aggregations.support.ValuesSource;
 import org.elasticsearch.search.aggregations.support.ValuesSourceAggregatorFactory;
 import org.elasticsearch.search.aggregations.support.ValuesSourceConfig;
 import org.elasticsearch.search.aggregations.support.ValuesSourceRegistry;
-import org.elasticsearch.search.aggregations.support.CoreValuesSourceType;
-import org.elasticsearch.search.aggregations.support.ValuesSource;
 import org.elasticsearch.search.internal.SearchContext;
 
 import java.io.IOException;
@@ -33,16 +33,17 @@ class DateHierarchyAggregatorFactory extends ValuesSourceAggregatorFactory {
     private List<DateHierarchyAggregationBuilder.PreparedRounding> preparedRoundings;
     private final DateHierarchyAggregator.BucketCountThresholds bucketCountThresholds;
 
-    DateHierarchyAggregatorFactory(String name,
-                                   ValuesSourceConfig config,
-                                   BucketOrder order,
-                                   List<DateHierarchyAggregationBuilder.PreparedRounding> preparedRoundings,
-                                   long minDocCount,
-                                   DateHierarchyAggregator.BucketCountThresholds bucketCountThresholds,
-                                   AggregationContext context,
-                                   AggregatorFactory parent,
-                                   AggregatorFactories.Builder subFactoriesBuilder,
-                                   Map<String, Object> metadata
+    DateHierarchyAggregatorFactory(
+        String name,
+        ValuesSourceConfig config,
+        BucketOrder order,
+        List<DateHierarchyAggregationBuilder.PreparedRounding> preparedRoundings,
+        long minDocCount,
+        DateHierarchyAggregator.BucketCountThresholds bucketCountThresholds,
+        AggregationContext context,
+        AggregatorFactory parent,
+        AggregatorFactories.Builder subFactoriesBuilder,
+        Map<String, Object> metadata
     ) throws IOException {
         super(name, config, context, parent, subFactoriesBuilder, metadata);
         this.order = order;
@@ -52,25 +53,37 @@ class DateHierarchyAggregatorFactory extends ValuesSourceAggregatorFactory {
     }
 
     public static void registerAggregators(ValuesSourceRegistry.Builder builder) {
-        builder.register(DateHierarchyAggregationBuilder.REGISTRY_KEY, CoreValuesSourceType.DATE, (name,
-                                                                                                   factories,
-                                                                                                   order,
-                                                                                                   roundingsInfo,
-                                                                                                   minDocCount,
-                                                                                                   bucketCountThresholds,
-                                                                                                   valuesSourceConfig,
-                                                                                                   aggregationContext,
-                                                                                                   parent,
-                                                                                                   cardinality,
-                                                                                                   metadata) -> null,
-                true);
+        builder.register(
+            DateHierarchyAggregationBuilder.REGISTRY_KEY,
+            CoreValuesSourceType.DATE,
+            (
+                name,
+                factories,
+                order,
+                roundingsInfo,
+                minDocCount,
+                bucketCountThresholds,
+                valuesSourceConfig,
+                aggregationContext,
+                parent,
+                cardinality,
+                metadata) -> null,
+            true
+        );
     }
 
     @Override
-    protected Aggregator createUnmapped(Aggregator parent,
-                                        Map<String, Object> metadata) throws IOException {
-        final InternalAggregation aggregation = new InternalDateHierarchy(name, new ArrayList<>(), order, minDocCount,
-                bucketCountThresholds.getRequiredSize(), bucketCountThresholds.getShardSize(), 0, metadata);
+    protected Aggregator createUnmapped(Aggregator parent, Map<String, Object> metadata) throws IOException {
+        final InternalAggregation aggregation = new InternalDateHierarchy(
+            name,
+            new ArrayList<>(),
+            order,
+            minDocCount,
+            bucketCountThresholds.getRequiredSize(),
+            bucketCountThresholds.getShardSize(),
+            0,
+            metadata
+        );
         return new NonCollectingAggregator(name, context, parent, factories, metadata) {
             {
                 // even in the case of an unmapped aggregator, validate the
@@ -79,18 +92,21 @@ class DateHierarchyAggregatorFactory extends ValuesSourceAggregatorFactory {
             }
 
             @Override
-            public InternalAggregation buildEmptyAggregation() { return aggregation; }
+            public InternalAggregation buildEmptyAggregation() {
+                return aggregation;
+            }
         };
     }
 
     @Override
-    protected Aggregator doCreateInternal(Aggregator parent, CardinalityUpperBound cardinality, Map<String, Object> metadata
-    ) throws IOException {
+    protected Aggregator doCreateInternal(Aggregator parent, CardinalityUpperBound cardinality, Map<String, Object> metadata)
+        throws IOException {
 
-        DateHierarchyAggregator.BucketCountThresholds bucketCountThresholds = new
-                DateHierarchyAggregator.BucketCountThresholds(this.bucketCountThresholds);
+        DateHierarchyAggregator.BucketCountThresholds bucketCountThresholds = new DateHierarchyAggregator.BucketCountThresholds(
+            this.bucketCountThresholds
+        );
         if (!InternalOrder.isKeyOrder(order)
-                && bucketCountThresholds.getShardSize() == DateHierarchyAggregationBuilder.DEFAULT_BUCKET_COUNT_THRESHOLDS.getShardSize()) {
+            && bucketCountThresholds.getShardSize() == DateHierarchyAggregationBuilder.DEFAULT_BUCKET_COUNT_THRESHOLDS.getShardSize()) {
             // The user has not made a shardSize selection. Use default
             // heuristic to avoid any wrong-ranking caused by distributed
             // counting
@@ -98,8 +114,17 @@ class DateHierarchyAggregatorFactory extends ValuesSourceAggregatorFactory {
         }
         bucketCountThresholds.ensureValidity();
         return new DateHierarchyAggregator(
-                name, factories, context, (ValuesSource.Numeric) config.getValuesSource(),
-                order, minDocCount, bucketCountThresholds, preparedRoundings, parent, cardinality, metadata);
+            name,
+            factories,
+            context,
+            (ValuesSource.Numeric) config.getValuesSource(),
+            order,
+            minDocCount,
+            bucketCountThresholds,
+            preparedRoundings,
+            parent,
+            cardinality,
+            metadata
+        );
     }
 }
-

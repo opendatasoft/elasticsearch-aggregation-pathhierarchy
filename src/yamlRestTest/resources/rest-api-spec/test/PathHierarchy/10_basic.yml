@@ -8,3 +8,8 @@
       nodes.info: {}
 
   - match: {nodes.$master.plugins.0.name: pathhierarchy-aggregation}
+
+  - do:
+      info: {}
+
+  - match: { cluster_name: "yamlRestTest" }

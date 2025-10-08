@@ -1,12 +1,20 @@
+/*
+Gradle build file for development building, testing, and packaging.
+*/
+
 buildscript {
     repositories {
-        mavenLocal()
         mavenCentral()
     }
 
     dependencies {
         classpath "org.elasticsearch.gradle:build-tools:${es_version}"
     }
+}
+
+// the spotless plugin is dedicated to format the code
+plugins {
+  id("com.diffplug.spotless") version "7.0.4"
 }
 
 repositories {
@@ -17,13 +25,10 @@ repositories {
 group = 'org.elasticsearch.plugin'
 version = "${plugin_version}"
 
-def versions = org.elasticsearch.gradle.VersionProperties.versions
-
 apply plugin: 'java'
 apply plugin: 'idea'
 apply plugin: 'elasticsearch.esplugin'
 apply plugin: 'elasticsearch.yaml-rest-test'
-
 
 esplugin {
     name 'pathhierarchy-aggregation'
@@ -33,17 +38,46 @@ esplugin {
     noticeFile = rootProject.file('README.md')
 }
 
-
+def versions = org.elasticsearch.gradle.VersionProperties.versions
 dependencies {
     implementation "org.elasticsearch:elasticsearch:${es_version}"
     yamlRestTestImplementation "org.elasticsearch.test:framework:${es_version}"
+    yamlRestTestImplementation "org.elasticsearch.test:yaml-rest-runner:${es_version}"
     yamlRestTestImplementation "org.apache.logging.log4j:log4j-core:${versions.log4j}"
 }
 
-tasks.named("yamlRestTest").configure {
-  systemProperty 'tests.security.manager', 'false'
+// add -Xlint:deprecation to check the Elasticsearch deprecation warning at compile-time
+allprojects {
+    gradle.projectsEvaluated {
+        tasks.withType(JavaCompile) {
+            options.compilerArgs << "-Xlint:deprecation"
+            options.compilerArgs << "-Xlint:unchecked"
+        }
+    }
 }
 
-tasks.named("test").configure {
-  systemProperty 'tests.security.manager', 'false'
+// automatic formatting configuration (the same configuration as elasticsearch)
+spotless {
+    java {
+        importOrderFile('config/elastic.importorder') // import order file as exported from elastic
+        eclipse().configFile('config/formatterConfig.xml')
+        trimTrailingWhitespace()
+        target 'src/**/*.java'
+    }
+}
+
+check.dependsOn spotlessCheck
+
+testClusters.configureEach {
+    // Make sure the ES distribution used for rest tests is the "complete" variant
+    testDistribution = 'DEFAULT'
+
+    // Disable security (avoids annoying warnings/failures with xpack features)
+    setting 'xpack.security.enabled', 'false'
+
+    // Logging levels for debugging: logs are located in build/testclusters/runTask-0/logs/
+    setting 'logger._root', 'DEBUG'
+    setting 'logger.org.elasticsearch.plugins', 'DEBUG'
+    setting 'logger.org.elasticsearch.cluster', 'DEBUG'
+    setting 'logger.org.elasticsearch.cluster.metadata', 'TRACE'
 }

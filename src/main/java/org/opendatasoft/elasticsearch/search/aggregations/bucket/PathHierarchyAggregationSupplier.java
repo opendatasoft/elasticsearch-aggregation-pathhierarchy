@@ -13,18 +13,20 @@ import java.util.Map;
 
 @FunctionalInterface
 public interface PathHierarchyAggregationSupplier {
-    Aggregator build(String name,
-                     AggregatorFactories factories,
-                     BytesRef separator,
-                     int minDepth,
-                     int maxDepth,
-                     boolean keepBlankPath,
-                     BucketOrder order,
-                     long minDocCount,
-                     PathHierarchyAggregator.BucketCountThresholds bucketCountThresholds,
-                     ValuesSourceConfig valuesSourceConfig,
-                     SearchContext aggregationContext,
-                     Aggregator parent,
-                     CardinalityUpperBound cardinality,
-                     Map<String, Object> metadata) throws IOException;
+    Aggregator build(
+        String name,
+        AggregatorFactories factories,
+        BytesRef separator,
+        int minDepth,
+        int maxDepth,
+        boolean keepBlankPath,
+        BucketOrder order,
+        long minDocCount,
+        PathHierarchyAggregator.BucketCountThresholds bucketCountThresholds,
+        ValuesSourceConfig valuesSourceConfig,
+        SearchContext aggregationContext,
+        Aggregator parent,
+        CardinalityUpperBound cardinality,
+        Map<String, Object> metadata
+    ) throws IOException;
 }

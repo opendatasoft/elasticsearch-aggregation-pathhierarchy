@@ -1,17 +1,16 @@
 package org.opendatasoft.elasticsearch.search.aggregations.bucket;
 
-import org.apache.lucene.index.LeafReaderContext;
 import org.apache.lucene.index.SortedNumericDocValues;
 import org.apache.lucene.util.BytesRef;
 import org.elasticsearch.ElasticsearchException;
-import org.elasticsearch.common.Rounding;
 import org.elasticsearch.common.io.stream.StreamInput;
 import org.elasticsearch.common.io.stream.StreamOutput;
 import org.elasticsearch.common.io.stream.Writeable;
-import org.elasticsearch.core.Releasables;
 import org.elasticsearch.common.util.BytesRefHash;
-import org.elasticsearch.xcontent.ToXContentFragment;
-import org.elasticsearch.xcontent.XContentBuilder;
+import org.elasticsearch.common.util.LongArray;
+import org.elasticsearch.common.util.ObjectArray;
+import org.elasticsearch.core.Releasables;
+import org.elasticsearch.search.aggregations.AggregationExecutionContext;
 import org.elasticsearch.search.aggregations.Aggregator;
 import org.elasticsearch.search.aggregations.AggregatorFactories;
 import org.elasticsearch.search.aggregations.BucketOrder;
@@ -20,41 +19,41 @@ import org.elasticsearch.search.aggregations.InternalAggregation;
 import org.elasticsearch.search.aggregations.LeafBucketCollector;
 import org.elasticsearch.search.aggregations.LeafBucketCollectorBase;
 import org.elasticsearch.search.aggregations.bucket.BucketsAggregator;
-import org.elasticsearch.search.aggregations.support.ValuesSource;
 import org.elasticsearch.search.aggregations.support.AggregationContext;
+import org.elasticsearch.search.aggregations.support.ValuesSource;
+import org.elasticsearch.xcontent.ToXContentFragment;
+import org.elasticsearch.xcontent.XContentBuilder;
 
 import java.io.IOException;
 import java.util.Arrays;
-import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
-
 public class DateHierarchyAggregator extends BucketsAggregator {
 
-    public DateHierarchyAggregator(String name,
-                                   AggregatorFactories factories,
-                                   AggregationContext context,
-                                   ValuesSource.Numeric valuesSource,
-                                   BucketOrder order,
-                                   long minDocCount,
-                                   BucketCountThresholds bucketCountThresholds,
-                                   List<DateHierarchyAggregationBuilder.PreparedRounding> preparedRoundings,
-                                   Aggregator parent,
-                                   CardinalityUpperBound cardinalityUpperBound,
-                                   Map<String,  Object> metadata
+    public DateHierarchyAggregator(
+        String name,
+        AggregatorFactories factories,
+        AggregationContext context,
+        ValuesSource.Numeric valuesSource,
+        BucketOrder order,
+        long minDocCount,
+        BucketCountThresholds bucketCountThresholds,
+        List<DateHierarchyAggregationBuilder.PreparedRounding> preparedRoundings,
+        Aggregator parent,
+        CardinalityUpperBound cardinalityUpperBound,
+        Map<String, Object> metadata
     ) throws IOException {
         super(name, factories, context, parent, cardinalityUpperBound, metadata);
         this.valuesSource = valuesSource;
         this.preparedRoundings = preparedRoundings;
         this.minDocCount = minDocCount;
-        bucketOrds =  new BytesRefHash(1, context.bigArrays());
+        bucketOrds = new BytesRefHash(1, context.bigArrays());
         this.bucketCountThresholds = bucketCountThresholds;
         order.validate(this);
         this.order = order;
-        this.partiallyBuiltBucketComparator = order == null ? null : order.partiallyBuiltBucketComparator(b -> b.bucketOrd, this);
     }
 
     public static class BucketCountThresholds implements Writeable, ToXContentFragment {
@@ -134,8 +133,7 @@ public class DateHierarchyAggregator extends BucketsAggregator {
                 return false;
             }
             DateHierarchyAggregator.BucketCountThresholds other = (DateHierarchyAggregator.BucketCountThresholds) obj;
-            return Objects.equals(requiredSize, other.requiredSize)
-                    && Objects.equals(shardSize, other.shardSize);
+            return Objects.equals(requiredSize, other.requiredSize) && Objects.equals(shardSize, other.shardSize);
         }
     }
 
@@ -145,7 +143,6 @@ public class DateHierarchyAggregator extends BucketsAggregator {
     private final long minDocCount;
     private final BucketCountThresholds bucketCountThresholds;
     private final List<DateHierarchyAggregationBuilder.PreparedRounding> preparedRoundings;
-    protected final Comparator<InternalPathHierarchy.InternalBucket> partiallyBuiltBucketComparator;
 
     /**
      * The collector collects the docs, including or not some score (depending of the including of a Scorer) in the
@@ -154,11 +151,11 @@ public class DateHierarchyAggregator extends BucketsAggregator {
      * The LeafBucketCollector is a "Per-leaf bucket collector". It collects docs for the account of buckets.
      */
     @Override
-    public LeafBucketCollector getLeafCollector(LeafReaderContext ctx, LeafBucketCollector sub) throws IOException {
+    public LeafBucketCollector getLeafCollector(AggregationExecutionContext ctx, LeafBucketCollector sub) throws IOException {
         if (valuesSource == null) {
             return LeafBucketCollector.NO_OP_COLLECTOR;
         }
-        final SortedNumericDocValues values = valuesSource.longValues(ctx);
+        final SortedNumericDocValues values = valuesSource.longValues(ctx.getLeafReaderContext());
 
         return new LeafBucketCollectorBase(sub, values) {
 
@@ -171,7 +168,7 @@ public class DateHierarchyAggregator extends BucketsAggregator {
                     for (int i = 0; i < valuesCount; ++i) {
                         long value = values.nextValue();
                         String path = "";
-                        for (DateHierarchyAggregationBuilder.PreparedRounding preparedRounding: preparedRoundings) {
+                        for (DateHierarchyAggregationBuilder.PreparedRounding preparedRounding : preparedRoundings) {
                             long roundedValue = preparedRounding.prepared.round(value);
                             path += preparedRounding.roundingInfo.format.format(roundedValue).toString();
                             long bucketOrd = bucketOrds.add(new BytesRef(path));
@@ -190,66 +187,84 @@ public class DateHierarchyAggregator extends BucketsAggregator {
     }
 
     @Override
-    public InternalAggregation[] buildAggregations(long[] owningBucketOrdinals) throws IOException {
+    public InternalAggregation[] buildAggregations(LongArray owningBucketOrdinals) throws IOException {
 
-        InternalDateHierarchy.InternalBucket[][] topBucketsPerOrd = new InternalDateHierarchy.InternalBucket[owningBucketOrdinals.length][];
-        InternalDateHierarchy[] results = new InternalDateHierarchy[owningBucketOrdinals.length];
+        try (
+            ObjectArray<InternalDateHierarchy.InternalBucket[]> topBucketsPerOrd = bigArrays().newObjectArray(owningBucketOrdinals.size())
+        ) {
 
-        for (int ordIdx = 0; ordIdx < owningBucketOrdinals.length; ordIdx++) {
-            assert owningBucketOrdinals[ordIdx] == 0;
+            InternalDateHierarchy[] results = new InternalDateHierarchy[Math.toIntExact(owningBucketOrdinals.size())];
 
-            // build buckets and store them sorted
-            final int size = (int) Math.min(bucketOrds.size(), bucketCountThresholds.getShardSize());
+            for (int ordIdx = 0; ordIdx < owningBucketOrdinals.size(); ordIdx++) {
+                assert owningBucketOrdinals.get(ordIdx) == 0;
 
-            PathSortedTree<String, InternalDateHierarchy.InternalBucket> pathSortedTree = new PathSortedTree<>(order.comparator(), size);
+                // build buckets and store them sorted
+                final int size = (int) Math.min(bucketOrds.size(), bucketCountThresholds.getShardSize());
 
-            InternalDateHierarchy.InternalBucket spare;
-            for (int i = 0; i < bucketOrds.size(); i++) {
-                spare = new InternalDateHierarchy.InternalBucket(0, null, null, null, 0, null);
+                PathSortedTree<String, InternalDateHierarchy.InternalBucket> pathSortedTree = new PathSortedTree<>(
+                    order.comparator(),
+                    size
+                );
 
-                BytesRef term = new BytesRef();
-                bucketOrds.get(i, term);
-                String[] paths = term.utf8ToString().split("/", -1);
+                InternalDateHierarchy.InternalBucket spare;
+                for (int i = 0; i < bucketOrds.size(); i++) {
+                    spare = new InternalDateHierarchy.InternalBucket(0, null, null, null, 0, null);
 
-                spare.paths = paths;
-                spare.key = term;
-                spare.level = paths.length - 1;
-                spare.name = paths[spare.level];
-                spare.docCount = bucketDocCount(i);
-                spare.bucketOrd = i;
+                    BytesRef term = new BytesRef();
+                    bucketOrds.get(i, term);
+                    String[] paths = term.utf8ToString().split("/", -1);
 
-                pathSortedTree.add(spare.paths, spare);
+                    spare.paths = paths;
+                    spare.key = term;
+                    spare.level = paths.length - 1;
+                    spare.name = paths[spare.level];
+                    spare.docCount = bucketDocCount(i);
+                    spare.bucketOrd = i;
+
+                    pathSortedTree.add(spare.paths, spare);
+                }
+
+                // Get the top buckets
+                topBucketsPerOrd.set(ordIdx, new InternalDateHierarchy.InternalBucket[size]);
+                long otherHierarchyNodes = pathSortedTree.getFullSize();
+                Iterator<InternalDateHierarchy.InternalBucket> iterator = pathSortedTree.consumer();
+                for (int i = 0; i < size; i++) {
+                    final InternalDateHierarchy.InternalBucket bucket = iterator.next();
+                    topBucketsPerOrd.get(ordIdx)[i] = bucket;
+                    otherHierarchyNodes -= 1;
+                }
+
+                results[ordIdx] = new InternalDateHierarchy(
+                    name,
+                    Arrays.asList(topBucketsPerOrd.get(ordIdx)),
+                    order,
+                    minDocCount,
+                    bucketCountThresholds.getRequiredSize(),
+                    bucketCountThresholds.getShardSize(),
+                    otherHierarchyNodes,
+                    metadata()
+                );
             }
 
-            // Get the top buckets
-            topBucketsPerOrd[ordIdx] = new InternalDateHierarchy.InternalBucket[size];
-            long otherHierarchyNodes = pathSortedTree.getFullSize();
-            Iterator<InternalDateHierarchy.InternalBucket> iterator = pathSortedTree.consumer();
-            for (int i = 0; i < size; i++) {
-                final InternalDateHierarchy.InternalBucket bucket = iterator.next();
-                topBucketsPerOrd[ordIdx][i] = bucket;
-                otherHierarchyNodes -= 1;
-            }
+            // Build sub-aggregations for pruned buckets
+            buildSubAggsForAllBuckets(topBucketsPerOrd, b -> b.bucketOrd, (b, aggregations) -> b.aggregations = aggregations);
 
-            results[ordIdx] = new InternalDateHierarchy(name, Arrays.asList(topBucketsPerOrd[ordIdx]), order,
-                    minDocCount, bucketCountThresholds.getRequiredSize(), bucketCountThresholds.getShardSize(),
-                    otherHierarchyNodes, metadata());
+            return results;
         }
-
-        // Build sub-aggregations for pruned buckets
-        buildSubAggsForAllBuckets(
-                topBucketsPerOrd,
-                b -> b.bucketOrd,
-                (b, aggregations) -> b.aggregations = aggregations
-        );
-
-        return results;
     }
 
     @Override
     public InternalAggregation buildEmptyAggregation() {
-        return new InternalDateHierarchy(name, null, order, minDocCount, bucketCountThresholds.getRequiredSize(),
-                bucketCountThresholds.getShardSize(), 0, metadata());
+        return new InternalDateHierarchy(
+            name,
+            null,
+            order,
+            minDocCount,
+            bucketCountThresholds.getRequiredSize(),
+            bucketCountThresholds.getShardSize(),
+            0,
+            metadata()
+        );
     }
 
     @Override
