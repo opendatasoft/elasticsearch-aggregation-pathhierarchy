@@ -329,7 +329,6 @@ public class InternalPathHierarchy extends InternalMultiBucketAggregation<Intern
 
     @Override
     public XContentBuilder doXContentBody(XContentBuilder builder, Params params) throws IOException {
-        // builder.field(SUM_OF_OTHER_HIERARCHY_NODES.getPreferredName(), otherHierarchyNodes);
         Iterator<InternalBucket> bucketIterator = buckets.iterator();
         builder.startArray(CommonFields.BUCKETS.getPreferredName());
         InternalBucket prevBucket = null;

@@ -189,10 +189,6 @@ public class DateHierarchyAggregator extends BucketsAggregator {
     @Override
     public InternalAggregation[] buildAggregations(LongArray owningBucketOrdinals) throws IOException {
 
-        // InternalDateHierarchy.InternalBucket[][] topBucketsPerOrd = new
-        // InternalDateHierarchy.InternalBucket[owningBucketOrdinals.length][];
-        // InternalDateHierarchy[] results = new InternalDateHierarchy[owningBucketOrdinals.length];
-
         try (
             ObjectArray<InternalDateHierarchy.InternalBucket[]> topBucketsPerOrd = bigArrays().newObjectArray(owningBucketOrdinals.size())
         ) {
@@ -200,7 +196,6 @@ public class DateHierarchyAggregator extends BucketsAggregator {
             InternalDateHierarchy[] results = new InternalDateHierarchy[Math.toIntExact(owningBucketOrdinals.size())];
 
             for (int ordIdx = 0; ordIdx < owningBucketOrdinals.size(); ordIdx++) {
-                // assert owningBucketOrdinals[ordIdx] == 0;
                 assert owningBucketOrdinals.get(ordIdx) == 0;
 
                 // build buckets and store them sorted
@@ -231,7 +226,6 @@ public class DateHierarchyAggregator extends BucketsAggregator {
 
                 // Get the top buckets
                 topBucketsPerOrd.set(ordIdx, new InternalDateHierarchy.InternalBucket[size]);
-                // topBucketsPerOrd[ordIdx] = new InternalDateHierarchy.InternalBucket[size];
                 long otherHierarchyNodes = pathSortedTree.getFullSize();
                 Iterator<InternalDateHierarchy.InternalBucket> iterator = pathSortedTree.consumer();
                 for (int i = 0; i < size; i++) {
