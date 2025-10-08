@@ -16,7 +16,7 @@ Installation
 ------------
 
 To install it, launch this command in Elasticsearch directory replacing the url with a release suiting your case (please check available releases [here](https://github.com/opendatasoft/elasticsearch-aggregation-pathhierarchy/releases)):
-`./bin/elasticsearch-plugin install https://github.com/opendatasoft/elasticsearch-aggregation-pathhierarchy/releases/download/v7.17.28.0/pathhierarchy-aggregation-7.17.28.0.zip`
+`./bin/elasticsearch-plugin install https://github.com/opendatasoft/elasticsearch-aggregation-pathhierarchy/releases/download/v8.19.4.0/pathhierarchy-aggregation-8.19.4.0.zip`
 
 Build
 -----
