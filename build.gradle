@@ -80,4 +80,7 @@ testClusters.configureEach {
     setting 'logger.org.elasticsearch.plugins', 'DEBUG'
     setting 'logger.org.elasticsearch.cluster', 'DEBUG'
     setting 'logger.org.elasticsearch.cluster.metadata', 'TRACE'
+
+    // uncomment to enable remote JVM debugger for local dev
+    // jvmArgs "-agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=*:5007"
 }
