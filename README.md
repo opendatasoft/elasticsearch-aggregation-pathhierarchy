@@ -21,7 +21,7 @@ To install it, launch this command in Elasticsearch directory replacing the url 
 Build
 -----
 
-Built with Java 17 and Gradle 8.10.2.
+Built with Java 17.
 
 The first 3 digits of plugin version is Elasticsearch versioning. The last digit is used for plugin versioning under an elasticsearch version.
 
